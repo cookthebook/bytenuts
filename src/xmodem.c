@@ -10,8 +10,8 @@
 
 int _xmodem_wait(int fd, uint8_t *ret, int timeout_ms);
 
-uint16_t _xmodem_crc(void *buf, size_t len);
-uint8_t _xmodem_csum(void *buf, size_t len);
+uint16_t _xmodem_crc(const uint8_t *buf, size_t len);
+uint8_t _xmodem_csum(const uint8_t *buf, size_t len);
 void _xmodem_status_print(size_t sent, size_t total);
 
 int
@@ -167,37 +167,35 @@ _xmodem_wait(int fd, uint8_t *ret, int timeout_ms)
     return 0;
 }
 
-uint16_t
-_xmodem_crc(void *buf, size_t len)
+uint8_t
+_xmodem_csum(const uint8_t *data, size_t sz)
 {
-    uint16_t crc;
-    char i;
+    uint16_t sum = 0;
+    int i;
+    for (i = 0; i < sz; i++) {
+        sum += data[i];
+    }
+    return (uint8_t)(sum & 0xff);
+}
 
-    crc = 0;
-    while (--len >= 0)
-    {
-        crc = crc ^ (uint16_t) (*(uint8_t *)buf++) << 8;
-        i = 8;
-        do
-        {
-            if (crc & 0x8000)
+uint16_t
+_xmodem_crc(const uint8_t *data, size_t len)
+{
+    uint16_t crc = 0;
+
+    while ((len--) > 0) {
+        uint8_t i = 8;
+
+        crc = crc ^ (uint16_t) *data++ << 8;
+
+        do {
+            if (crc & 0x8000) {
                 crc = crc << 1 ^ 0x1021;
-            else
+            } else {
                 crc = crc << 1;
-        } while(--i);
+            }
+        } while (--i);
     }
 
     return (crc);
-}
-
-uint8_t
-_xmodem_csum(void *buf, size_t len)
-{
-    uint8_t ret = 0;
-
-    for (size_t i = 0; i < len; i++) {
-        ret += ((uint8_t *)buf)[i];
-    }
-
-    return ret;
 }
