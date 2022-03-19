@@ -335,6 +335,7 @@ mode_normal(int ch)
         }
 
         ingest.history_pos--;
+        memset(ingest.inbuf, 0, sizeof(ingest.inbuf));
         strcpy(ingest.inbuf, ingest.history[ingest.history_pos]);
         ingest.inlen = strlen(ingest.inbuf);
         ingest.inpos = ingest.inlen;
@@ -346,11 +347,13 @@ mode_normal(int ch)
             break;
         } else if (ingest.history_pos == ingest.history_len - 1) { /* load back temp storage */
             ingest.history_pos++;
+            memset(ingest.inbuf, 0, sizeof(ingest.inbuf));
             strcpy(ingest.inbuf, ingest.tmp_history);
             ingest.inlen = strlen(ingest.inbuf);
             ingest.inpos = ingest.inlen;
         } else {
             ingest.history_pos++;
+            memset(ingest.inbuf, 0, sizeof(ingest.inbuf));
             strcpy(ingest.inbuf, ingest.history[ingest.history_pos]);
             ingest.inlen = strlen(ingest.inbuf);
             ingest.inpos = ingest.inlen;
@@ -599,6 +602,11 @@ static int
 inbuf_load()
 {
     int cx, cy = -1;
+    int win_len = getmaxx(ingest.input) + 1;
+    size_t prepend_len = ingest.prepend ? strlen(ingest.prepend) : 0;
+    int buffer_len = win_len - prepend_len;
+    int start = ingest.inlen > (win_len + prepend_len) ?
+        (ingest.inlen - win_len - prepend_len - 1) : 0;
 
     pthread_mutex_lock(ingest.term_lock);
 
@@ -607,7 +615,18 @@ inbuf_load()
     if (ingest.prepend)
         wprintw(ingest.input, "%s", ingest.prepend);
 
-    for (int i = 0; i < ingest.inlen; i++) {
+    if (start > 0) {
+        waddch(ingest.input, '$');
+        start++;
+    }
+
+    if (start > ingest.inpos) {
+        start = ingest.inpos;
+    } else if ((start + buffer_len) < ingest.inpos) {
+        start = ingest.inpos - buffer_len;
+    }
+
+    for (int i = start; i < ingest.inlen; i++) {
         if (i == ingest.inpos)
             getyx(ingest.input, cy, cx);
         waddch(ingest.input, ingest.inbuf[i]);
@@ -797,7 +816,7 @@ static void
 update_cmd_pg_status()
 {
     if (ingest.cmd_pgs_n > 0) {
-        bytenuts_set_status(STATUS_CMDPAGE, "pg.%d", ingest.cmd_pg_cur+1);
+        bytenuts_set_status(STATUS_CMDPAGE, "cmd pg.%d", ingest.cmd_pg_cur+1);
     } else {
         bytenuts_set_status(STATUS_CMDPAGE, "n/a");
     }
