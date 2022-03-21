@@ -17,7 +17,7 @@ static cheerios_t cheerios;
 static void *cheerios_thread(void *arg);
 static int insert_buf(line_buffer_t *lines, const char *buf, size_t len);
 static int write_lines(line_buffer_t *lines);
-static int handle_color(line_buffer_t *lines, int line_idx, int *pos);
+static int handle_color(line_buffer_t *lines, int line_idx, int *pos, int apply);
 short curs_color(int fg);
 static int newline(line_buffer_t *lines);
 
@@ -367,32 +367,96 @@ write_lines(line_buffer_t *lines)
     int row = lines->bot;
     int rows_printed = 0;
     int window_height = getmaxy(cheerios.output);
+    int window_width = getmaxx(cheerios.output);
+    line_buffer_t lines_wrapped = { 0 };
 
     if (row < 0)
         row = lines->n_lines - 1;
+
+    while (row >= 0 && rows_printed < window_height) {
+        /* we can print the whole line */
+        if (lines->line_lens[row] <= window_width) {
+            lines_wrapped.n_lines++;
+            lines_wrapped.lines = realloc(
+                lines_wrapped.lines,
+                sizeof(uint8_t *) * lines_wrapped.n_lines
+            );
+            lines_wrapped.line_lens = realloc(
+                lines_wrapped.line_lens,
+                sizeof(int) * lines_wrapped.n_lines
+            );
+
+            lines_wrapped.lines[lines_wrapped.n_lines - 1] = lines->lines[row];
+            lines_wrapped.line_lens[lines_wrapped.n_lines - 1] = lines->line_lens[row];
+
+            rows_printed++;
+        }
+        /* we have to split the line */
+        else {
+            int n_split = lines->line_lens[row] / window_width;
+
+            if ((lines->line_lens[row] % window_width) == 0)
+                n_split--;
+
+            lines_wrapped.n_lines += n_split + 1;
+            lines_wrapped.lines = realloc(
+                lines_wrapped.lines,
+                sizeof(uint8_t *) * lines_wrapped.n_lines
+            );
+            lines_wrapped.line_lens = realloc(
+                lines_wrapped.line_lens,
+                sizeof(int) * lines_wrapped.n_lines
+            );
+
+            /* fill out lines that fill the width */
+            for (int i = 0; i < n_split; i++) {
+                lines_wrapped.lines[lines_wrapped.n_lines - 1 - i] =
+                    &lines->lines[row][i * window_width];
+                lines_wrapped.line_lens[lines_wrapped.n_lines - 1 - i] =
+                    window_width;
+            }
+            /* left over */
+            lines_wrapped.lines[lines_wrapped.n_lines - 1 - n_split] =
+                &lines->lines[row][n_split * window_width];
+
+            if ((lines->line_lens[row] % window_width) == 0) {
+                lines_wrapped.line_lens[lines_wrapped.n_lines - 1 - n_split] = window_width;
+            } else {
+                lines_wrapped.line_lens[lines_wrapped.n_lines - 1 - n_split] =
+                    lines->line_lens[row] % window_width;
+            }
+
+            rows_printed += n_split + 1;
+        }
+
+        row--;
+    }
 
     pthread_mutex_lock(cheerios.term_lock);
 
     curs_set(0);
     werase(cheerios.output);
 
-    while (row >= 0 && rows_printed < window_height) {
+    /* the copying process reverses the order of the rows... */
+    row = 0;
+    rows_printed = 0;
+    while (row < lines_wrapped.n_lines && rows_printed < window_height) {
         wmove(cheerios.output, window_height - rows_printed - 1, 0);
 
-        for (int i = 0; i < lines->line_lens[row]; i++) {
-            handle_color(lines, row, &i);
+        for (int i = 0; i < lines_wrapped.line_lens[row]; i++) {
+            handle_color(&lines_wrapped, row, &i, 1);
 
             if (i >= getmaxx(cheerios.output)) {
                 break;
             }
 
-            if (i < lines->line_lens[row]) {
-                waddch(cheerios.output, lines->lines[row][i]);
+            if (i < lines_wrapped.line_lens[row]) {
+                waddch(cheerios.output, lines_wrapped.lines[row][i]);
             }
         }
 
         rows_printed++;
-        row--;
+        row++;
     }
 
     curs_set(1);
@@ -406,11 +470,16 @@ write_lines(line_buffer_t *lines)
         bytenuts_set_status(STATUS_CHEERIOS, "locked");
     }
 
+    if (lines_wrapped.lines)
+        free(lines_wrapped.lines);
+    if (lines_wrapped.line_lens)
+        free(lines_wrapped.line_lens);
+
     return 0;
 }
 
 static int
-handle_color(line_buffer_t *lines, int line_idx, int *pos)
+handle_color(line_buffer_t *lines, int line_idx, int *pos, int apply)
 {
     short fg, bg = -1;
     int enable = -1;
@@ -468,6 +537,11 @@ handle_color(line_buffer_t *lines, int line_idx, int *pos)
         }
     }
 
+    if (!apply) {
+        *pos = p;
+        return 0;
+    }
+
     if (enable == 0) {
         for (int i = 0; i < NCOLOR_PAIRS; i++) {
             if (lines->enabled_pairs[i]) {
@@ -501,9 +575,6 @@ handle_color(line_buffer_t *lines, int line_idx, int *pos)
 
         lines->enabled_pairs[pair_pos] = 1;
         wattron(cheerios.output, COLOR_PAIR(pair_pos + 1));
-    }
-    else {
-        return 0;
     }
 
     *pos = p;
