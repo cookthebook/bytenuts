@@ -16,15 +16,15 @@
 "USAGE\n\n" \
 "bytenuts [OPTIONS] <serial path>\n" \
 "\nConfigs get loaded from ${HOME}/.bytenuts/config (if file exists)\n" \
-"\nOPTIONS\n\n" \
-"-h: show this help\n" \
-"-b <baud>: set a baud rate (default 115200)\n" \
-"-l <path>: log all output to the given file\n" \
-"-c <path>: load a config from the given path rather than the default\n" \
-"--colors=<0|1>: turn 8-bit ANSI colors off/on\n" \
-"--echo=<0|1>: turn input echoing off/on\n" \
-"--no_crlf=<0|1>: choose to send LF and not CRLF on input\n" \
-"--escape=<char>: change the default ctrl+b escape character\n" \
+"\n OPTIONS\n=========\n\n" \
+"-h\n    Show this help.\n\n" \
+"-b <baud>\n    Set a baud rate (default 115200).\n\n" \
+"-l <path>\n   Log all output to the given file.\n\n" \
+"-c <path>\n   Load a config from the given path rather than the default.\n\n" \
+"--colors=<0|1>\n    Turn 8-bit ANSI colors off/on.\n\n" \
+"--echo=<0|1>\n    Turn input echoing off/on.\n\n" \
+"--no_crlf=<0|1>\n    Choose to send LF and not CRLF on input.\n\n" \
+"--escape=<char>\n    Change the default ctrl+b escape character.\n" \
 )
 
 static int parse_args(int argc, char **argv);

@@ -601,39 +601,66 @@ handle_functions(int ch)
 static int
 inbuf_load()
 {
-    int cx, cy = -1;
+    static int start = 0;
+    int startx = 0, starty = 0;
+    int cx = -1, cy = -1;
     int win_len = getmaxx(ingest.input) + 1;
-    size_t prepend_len = ingest.prepend ? strlen(ingest.prepend) : 0;
-    int buffer_len = win_len - prepend_len;
-    int start = ingest.inlen > (win_len + prepend_len) ?
-        (ingest.inlen - win_len - prepend_len - 1) : 0;
 
     pthread_mutex_lock(ingest.term_lock);
 
     werase(ingest.input);
     wmove(ingest.input, 0, 0);
-    if (ingest.prepend)
+    if (ingest.prepend) {
         wprintw(ingest.input, "%s", ingest.prepend);
-
-    if (start > 0) {
-        waddch(ingest.input, '$');
-        start++;
+        getyx(ingest.input, starty, startx);
     }
 
     if (start > ingest.inpos) {
         start = ingest.inpos;
-    } else if ((start + buffer_len) < ingest.inpos) {
-        start = ingest.inpos - buffer_len;
+    }
+    /* this is not perfect as some characters are wider than one space, but it
+     * makes the algorithm for printing less redundant */
+    else if (ingest.inpos > (start + win_len)) {
+        start = ingest.inpos - win_len;
     }
 
-    for (int i = start; i < ingest.inlen; i++) {
-        if (i == ingest.inpos)
-            getyx(ingest.input, cy, cx);
-        waddch(ingest.input, ingest.inbuf[i]);
+    int i = 0;
+    int hit_cursor = 0;
+    while (1) {
+        int p = i + start;
+        int iy, ix;
+        i++;
+
+        getyx(ingest.input, iy, ix);
+
+        /* nothing left to write... */
+        if (p >= ingest.inlen)
+            break;
+
+        /* print the cursor at this position */
+        if (p == ingest.inpos) {
+            cy = iy;
+            cx = ix;
+            hit_cursor = 1;
+        }
+
+        /* we want to leave a blank character for printing the cursor at the end of the line */
+        if (ix >= (win_len-2)) {
+            /* we printed the cursor, so we can break */
+            if (hit_cursor)
+                break;
+            /* otherwise, we didn't print the cursor, so start over */
+            i = 0;
+            start++;
+            wmove(ingest.input, starty, startx);
+            continue;
+        }
+
+        waddch(ingest.input, ingest.inbuf[p]);
     }
 
     if (cx < 0) {
-        cx = ingest.inlen;
+        cx = ingest.inlen < win_len ? ingest.inlen : win_len - 1;
         cy = 0;
     }
 
