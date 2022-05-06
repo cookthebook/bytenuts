@@ -633,16 +633,16 @@ inbuf_load()
 
         getyx(ingest.input, iy, ix);
 
-        /* nothing left to write... */
-        if (p >= ingest.inlen)
-            break;
-
         /* print the cursor at this position */
         if (p == ingest.inpos) {
             cy = iy;
             cx = ix;
             hit_cursor = 1;
         }
+
+        /* nothing left to write... */
+        if (p >= ingest.inlen)
+            break;
 
         /* we want to leave a blank character for printing the cursor at the end of the line */
         if (ix >= (win_len-2)) {
