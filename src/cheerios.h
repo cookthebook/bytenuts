@@ -35,6 +35,7 @@ typedef struct cheerios_struct {
     int ser_fd;
     line_buffer_t lines;
     FILE *log;
+    FILE *backup;
     bytenuts_config_t *config;
     volatile int mode;
     pthread_cond_t cond;

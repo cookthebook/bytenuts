@@ -37,6 +37,7 @@ typedef struct bytenuts_struct {
     int serial_fd;
     bytenuts_config_t config;
     int config_overrides[4];
+    int resume;
     WINDOW *status_win;
     WINDOW *out_win;
     WINDOW *in_win;

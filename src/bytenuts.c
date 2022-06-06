@@ -29,6 +29,7 @@
 
 static int parse_args(int argc, char **argv);
 static int load_configs();
+static int load_state();
 static speed_t string_to_speed(const char *speed);
 static const char *speed_to_string(speed_t speed);
 
@@ -104,6 +105,10 @@ bytenuts_run(int argc, char **argv)
         char info[128];
         snprintf(info, sizeof(info), "Opened PTY port %s", ptsname(bytenuts.serial_fd));
         cheerios_info(info);
+    }
+
+    if (bytenuts.resume) {
+        load_state();
     }
 
     pthread_mutex_lock(&bytenuts.lock);
@@ -334,6 +339,9 @@ parse_args(int argc, char **argv)
             bytenuts.config.escape = argv[i][9];
             bytenuts.config_overrides[3] = 1;
         }
+        else if (!strcmp(argv[i], "--resume")) {
+            bytenuts.resume = 1;
+        }
         else {
             return -1;
         }
@@ -378,6 +386,60 @@ load_configs()
         else if (!bytenuts.config_overrides[3] && !memcmp(line, "escape=", 7)) {
             bytenuts.config.escape = line[7];
         }
+    }
+
+    return 0;
+}
+
+static int
+load_state()
+{
+    struct stat st;
+    char *buf;
+    char *home = getenv("HOME");
+    FILE *fd;
+
+    buf = calloc(1, snprintf(NULL, 0, "%s/.config/bytenuts/inbuf.log", home) + 1);
+    sprintf(buf, "%s/.config/bytenuts/inbuf.log", home);
+    fd = fopen(buf, "r");
+    stat(buf, &st);
+    free(buf);
+
+    if (fd) {
+        char **history = NULL;
+        int history_len = 0;
+
+        buf = calloc(1, st.st_size + 1);
+        while (fgets(buf, st.st_size+1, fd)) {
+            history_len++;
+            history = realloc(history, sizeof(char *) * history_len);
+            history[history_len-1] = strdup(buf);
+        }
+        fclose(fd);
+
+        if (history) {
+            ingest_set_history(history);
+            for (int i = 0; i < history_len; i++) {
+                free(history[i]);
+            }
+            free(history);
+        }
+
+        free(buf);
+    }
+
+    buf = calloc(1, snprintf(NULL, 0, "%s/.config/bytenuts/outbuf.log", home) + 1);
+    sprintf(buf, "%s/.config/bytenuts/outbuf.log", home);
+    fd = fopen(buf, "r");
+    stat(buf, &st);
+    free(buf);
+
+    if (fd) {
+        buf = malloc(st.st_size);
+        fread(buf, 1, st.st_size, fd);
+        cheerios_insert(buf, st.st_size);
+        free(buf);
+        fclose(fd);
     }
 
     return 0;

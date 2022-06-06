@@ -24,6 +24,9 @@ static int newline(line_buffer_t *lines);
 int
 cheerios_start(bytenuts_t *bytenuts)
 {
+    char *home;
+    char *cwd;
+
     memset(&cheerios, 0, sizeof(cheerios_t));
 
     cheerios.output = bytenuts->out_win;
@@ -39,6 +42,12 @@ cheerios_start(bytenuts_t *bytenuts)
             return -1;
         }
     }
+
+    cwd = getcwd(NULL, 0);
+    chdir(home);
+    cheerios.backup = fopen(".config/bytenuts/outbuf.log", "w");
+    chdir(cwd);
+    free(cwd);
 
     pthread_cond_init(&cheerios.cond, NULL);
     pthread_mutex_init(&cheerios.lock, NULL);
@@ -321,6 +330,8 @@ cheerios_thread(void *arg)
 
     if (cheerios.log)
         fclose(cheerios.log);
+    if (cheerios.backup)
+        fclose(cheerios.backup);
     pthread_exit(NULL);
     return NULL;
 }
@@ -332,8 +343,12 @@ insert_buf(line_buffer_t *lines, const char *buf, size_t len)
         newline(lines);
 
     for (size_t i = 0; i < len; i++) {
-        if (cheerios.log && cheerios.mode == CHEERIOS_MODE_NORMAL)
-            fwrite(&buf[i], 1, 1, cheerios.log);
+        if (cheerios.mode == CHEERIOS_MODE_NORMAL) {
+            if (cheerios.log)
+               fwrite(&buf[i], 1, 1, cheerios.log);
+            if (cheerios.backup)
+                fwrite(&buf[i], 1, 1, cheerios.backup);
+        }
 
         /* line feed starts a new row */
         if (buf[i] == '\n') {

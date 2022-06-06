@@ -49,6 +49,8 @@ ingest_start(bytenuts_t *bytenuts)
             idx++;
         }
 
+        ingest.history_fd = fopen(".config/bytenuts/inbuf.log", "w");
+
         chdir(cwd);
         free(cwd);
     }
@@ -71,6 +73,33 @@ ingest_stop()
 {
     ingest.running = 0;
     pthread_join(ingest.thr, NULL);
+
+    if (ingest.history_fd)
+        fclose(ingest.history_fd);
+
+    return 0;
+}
+
+int
+ingest_set_history(char **history)
+{
+    if (ingest.history) {
+        for (int i = 0; ingest.history[i] != NULL; i++) {
+            free(ingest.history[i]);
+        }
+        free(ingest.history);
+    }
+
+    ingest.history = calloc(1, sizeof(char *));
+    for (int i = 0; history[i] != NULL; i++) {
+        ingest.history = realloc(
+            ingest.history,
+            (i+2) * sizeof(char *)
+        );
+        ingest.history[i] = strdup(history[i]);
+        ingest.history[i+1] = NULL;
+    }
+
     return 0;
 }
 
@@ -319,6 +348,10 @@ mode_normal(int ch)
             ingest.history = realloc(ingest.history, ingest.history_len * sizeof(char *));
             ingest.history[ingest.history_pos] = strdup(ingest.inbuf);
             ingest.history_pos++;
+            if (ingest.history_fd) {
+                fwrite(ingest.inbuf, 1, strlen(ingest.inbuf), ingest.history_fd);
+                fwrite("\n", 1, 1, ingest.history_fd);
+            }
         }
 
         memset(ingest.inbuf, 0, sizeof(ingest.inbuf));

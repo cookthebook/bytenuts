@@ -3,6 +3,7 @@
 
 #include <ncurses.h>
 #include <pthread.h>
+#include <stdio.h>
 
 #include "bytenuts.h"
 
@@ -22,6 +23,7 @@ typedef struct ingest_struct {
     int inpos; /* cursor position within the inbuf itself */
     int inlen; /* length of the input buffer */
     char **history; /* array of strings representing the command history */
+    FILE *history_fd;
     char tmp_history[1024]; /* copy of inbuf before we load in history */
     int history_len;
     int history_pos; /* where we currently reside in the history */
@@ -43,5 +45,8 @@ int ingest_start(bytenuts_t *bytenuts);
 
 /* stop the input window thread */
 int ingest_stop();
+
+/* Set the the command history directly. Values are copied */
+int ingest_set_history(char **history);
 
 #endif /* _INGEST_H_ */
