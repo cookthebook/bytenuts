@@ -24,7 +24,7 @@ static int newline(line_buffer_t *lines);
 int
 cheerios_start(bytenuts_t *bytenuts)
 {
-    char *home;
+    char *home = getenv("HOME");
     char *cwd;
 
     memset(&cheerios, 0, sizeof(cheerios_t));

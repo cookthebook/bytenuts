@@ -19,12 +19,12 @@ typedef struct ingest_struct {
     pthread_t thr;
     volatile int running;
     char *prepend; /* string to be prepended in the prompt */
-    char inbuf[1024];
+    char inbuf[4096];
     int inpos; /* cursor position within the inbuf itself */
     int inlen; /* length of the input buffer */
     char **history; /* array of strings representing the command history */
     FILE *history_fd;
-    char tmp_history[1024]; /* copy of inbuf before we load in history */
+    char tmp_history[4096]; /* copy of inbuf before we load in history */
     int history_len;
     int history_pos; /* where we currently reside in the history */
     int mode;
@@ -47,6 +47,6 @@ int ingest_start(bytenuts_t *bytenuts);
 int ingest_stop();
 
 /* Set the the command history directly. Values are copied */
-int ingest_set_history(char **history);
+int ingest_set_history(char **history, int history_len);
 
 #endif /* _INGEST_H_ */

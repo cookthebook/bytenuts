@@ -11,6 +11,13 @@
 /* https://en.wikipedia.org/wiki/Control_character#How_control_characters_map_to_keyboards */
 #define CTRL(c) ((c)&31)
 
+typedef struct bytenuts_state_struct {
+    char **history; /* commands from previous session */
+    int history_len;
+    char *buf; /* previous buffer */
+    size_t buf_len;
+} bytenuts_state_t;
+
 typedef struct bytenuts_config_struct {
     int colors; /* enable terminal colors, default 1 */
     int echo; /* echo user input to the output window, default 0 */
@@ -38,6 +45,7 @@ typedef struct bytenuts_struct {
     bytenuts_config_t config;
     int config_overrides[4];
     int resume;
+    bytenuts_state_t state;
     WINDOW *status_win;
     WINDOW *out_win;
     WINDOW *in_win;

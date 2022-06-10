@@ -29,6 +29,7 @@
 
 static int parse_args(int argc, char **argv);
 static int load_configs();
+static int read_state();
 static int load_state();
 static speed_t string_to_speed(const char *speed);
 static const char *speed_to_string(speed_t speed);
@@ -47,6 +48,10 @@ bytenuts_run(int argc, char **argv)
 
     if (load_configs()) {
         return -1;
+    }
+
+    if (bytenuts.resume) {
+        read_state();
     }
 
     bytenuts.serial_fd = serial_open(bytenuts.config.serial_path, bytenuts.config.baud);
@@ -109,6 +114,13 @@ bytenuts_run(int argc, char **argv)
 
     if (bytenuts.resume) {
         load_state();
+    } else {
+        cheerios_insert(
+            "Welcome to Bytenuts\r\n"
+            "To quit press ctrl-b q\r\n"
+            "To see all commands, press ctrl-b h\r\n",
+            82
+        );
     }
 
     pthread_mutex_lock(&bytenuts.lock);
@@ -392,54 +404,70 @@ load_configs()
 }
 
 static int
-load_state()
+read_state()
 {
     struct stat st;
     char *buf;
+    char *cwd = getcwd(NULL, 0);
     char *home = getenv("HOME");
     FILE *fd;
 
-    buf = calloc(1, snprintf(NULL, 0, "%s/.config/bytenuts/inbuf.log", home) + 1);
-    sprintf(buf, "%s/.config/bytenuts/inbuf.log", home);
-    fd = fopen(buf, "r");
-    stat(buf, &st);
-    free(buf);
+    chdir(home);
 
-    if (fd) {
-        char **history = NULL;
-        int history_len = 0;
-
+    fd = fopen(".config/bytenuts/inbuf.log", "r");
+    stat(".config/bytenuts/inbuf.log", &st);
+    if (fd && st.st_size > 0) {
         buf = calloc(1, st.st_size + 1);
         while (fgets(buf, st.st_size+1, fd)) {
-            history_len++;
-            history = realloc(history, sizeof(char *) * history_len);
-            history[history_len-1] = strdup(buf);
-        }
-        fclose(fd);
-
-        if (history) {
-            ingest_set_history(history);
-            for (int i = 0; i < history_len; i++) {
-                free(history[i]);
-            }
-            free(history);
+            bytenuts.state.history_len++;
+            bytenuts.state.history = realloc(
+                bytenuts.state.history,
+                sizeof(char *) * bytenuts.state.history_len
+            );
+            bytenuts.state.history[bytenuts.state.history_len-1] = strdup(buf);
         }
 
         free(buf);
     }
-
-    buf = calloc(1, snprintf(NULL, 0, "%s/.config/bytenuts/outbuf.log", home) + 1);
-    sprintf(buf, "%s/.config/bytenuts/outbuf.log", home);
-    fd = fopen(buf, "r");
-    stat(buf, &st);
-    free(buf);
-
-    if (fd) {
-        buf = malloc(st.st_size);
-        fread(buf, 1, st.st_size, fd);
-        cheerios_insert(buf, st.st_size);
-        free(buf);
+    if (fd)
         fclose(fd);
+
+    stat(".config/bytenuts/outbuf.log", &st);
+    fd = fopen(".config/bytenuts/outbuf.log", "r");
+
+    if (fd && st.st_size > 0) {
+        bytenuts.state.buf = malloc(st.st_size);
+        bytenuts.state.buf_len = st.st_size;
+        fread(bytenuts.state.buf, 1, st.st_size, fd);
+    }
+    if (fd)
+        fclose(fd);
+
+    chdir(cwd);
+    free(cwd);
+
+    return 0;
+}
+
+static int
+load_state()
+{
+    if (bytenuts.state.history) {
+        ingest_set_history(bytenuts.state.history, bytenuts.state.history_len);
+
+        for (int i = 0; i < bytenuts.state.history_len; i++) {
+            free(bytenuts.state.history[i]);
+        }
+        free(bytenuts.state.history);
+        bytenuts.state.history = NULL;
+        bytenuts.state.history_len = 0;
+    }
+
+    if (bytenuts.state.buf) {
+        cheerios_insert(bytenuts.state.buf, bytenuts.state.buf_len);
+        free(bytenuts.state.buf);
+        bytenuts.state.buf = NULL;
+        bytenuts.state.buf_len = 0;
     }
 
     return 0;

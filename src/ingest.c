@@ -81,7 +81,7 @@ ingest_stop()
 }
 
 int
-ingest_set_history(char **history)
+ingest_set_history(char **history, int history_len)
 {
     if (ingest.history) {
         for (int i = 0; ingest.history[i] != NULL; i++) {
@@ -90,15 +90,27 @@ ingest_set_history(char **history)
         free(ingest.history);
     }
 
-    ingest.history = calloc(1, sizeof(char *));
-    for (int i = 0; history[i] != NULL; i++) {
-        ingest.history = realloc(
-            ingest.history,
-            (i+2) * sizeof(char *)
-        );
+    ingest.history = calloc(1, sizeof(char *) * (history_len+1));
+    for (int i = 0; i < history_len; i++) {
+        size_t item_len = strlen(history[i]);
         ingest.history[i] = strdup(history[i]);
-        ingest.history[i+1] = NULL;
+
+        while (
+            ingest.history[i][item_len-1] == '\n' ||
+            ingest.history[i][item_len-1] == '\r'
+        ) {
+            item_len--;
+            ingest.history[i][item_len] = '\0';
+        }
+
+        if (ingest.history_fd) {
+            fwrite(ingest.history[i], 1, item_len, ingest.history_fd);
+            fwrite("\n", 1, 1, ingest.history_fd);
+        }
     }
+
+    ingest.history_len = history_len;
+    ingest.history_pos = ingest.history_len;
 
     return 0;
 }
@@ -112,12 +124,6 @@ ingest_thread(void *arg)
     memset(ingest.inbuf, 0, sizeof(ingest.inbuf));
     ingest.inpos = 0;
 
-    cheerios_insert(
-        "Welcome to Bytenuts\r\n"
-        "To quit press ctrl-b q\r\n"
-        "To see all commands, press ctrl-b h\r\n",
-        82
-    );
     bytenuts_set_status(STATUS_INGEST, "normal");
 
     while (ingest.running) {
