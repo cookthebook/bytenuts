@@ -24,22 +24,6 @@ Bytenuts has been tested and built on x86-64 and 32-bit ARM Ubuntu 18.
 - Quick commands - Pages of quick commands are loaded from `~/.config/bytenuts/commands[1-10]`
 - Session resumption - Bytenuts can load the previous instance's commands and serial output
 
-## Planned Features
-
-Bytenuts is still very early in development. Here are some features that may get implemented.
-
-- Other transfer protocols - Maybe Kermit and ZModem
-
-## Un-Planned Features
-
-Bytenuts is not supposed to be the be-all end-all application, nor is it supposed to be able to do everything SecureCRT can. Here are some things it probably won't have.
-
-- Non-serial communications - No SSH, telnet, etc.
-- Elaborate menuing - Bytenuts functions will be shortcut driven to focus on what's important (the serial communication)
-- Script loading - Think like how you can load scripts in ZOC on SecureCRT. Write normal Python scripts if you want to do that kind of stuff.
-- Multi connection support - Open another instance of Bytenuts if you need to
-- Windows support - No
-
 ## Launch Options
 
 Launching Bytenuts like `bytenuts -h` provides this help print:
