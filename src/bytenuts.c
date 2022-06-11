@@ -21,6 +21,7 @@
 "-b <baud>\n    Set a baud rate (default 115200).\n\n" \
 "-l <path>\n   Log all output to the given file.\n\n" \
 "-c <path>\n   Load a config from the given path rather than the default.\n\n" \
+"-r|--resume\n    Resume the previous instance of bytenuts.\n\n" \
 "--colors=<0|1>\n    Turn 8-bit ANSI colors off/on.\n\n" \
 "--echo=<0|1>\n    Turn input echoing off/on.\n\n" \
 "--no_crlf=<0|1>\n    Choose to send LF and not CRLF on input.\n\n" \
@@ -351,7 +352,7 @@ parse_args(int argc, char **argv)
             bytenuts.config.escape = argv[i][9];
             bytenuts.config_overrides[3] = 1;
         }
-        else if (!strcmp(argv[i], "--resume")) {
+        else if (!strcmp(argv[i], "--resume") || !strcmp(argv[i], "-r")) {
             bytenuts.resume = 1;
         }
         else {

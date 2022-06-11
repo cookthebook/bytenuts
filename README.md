@@ -22,6 +22,7 @@ Bytenuts has been tested and built on x86-64 and 32-bit ARM Ubuntu 18.
 - Output history - Use page up/down, home/end, and ctrl + up/down arrow to scroll through the output window
 - Output logging - Output can be saved to a log file passed in with the `-l` option
 - Quick commands - Pages of quick commands are loaded from `~/.config/bytenuts/commands[1-10]`
+- Session resumption - Bytenuts can load the previous instance's commands and serial output
 
 ## Planned Features
 
@@ -50,12 +51,35 @@ bytenuts [OPTIONS] <serial path>
 
 Configs get loaded from ${HOME}/.bytenuts/config (if file exists)
 
-OPTIONS
+ OPTIONS
+=========
 
--h: show this help
--b <baud>: set a baud rate (default 115200)
--l <path>: log all output to the given file
--c <path>: load a config from the given path rather than the default
+-h
+    Show this help.
+
+-b <baud>
+    Set a baud rate (default 115200).
+
+-l <path>
+   Log all output to the given file.
+
+-c <path>
+   Load a config from the given path rather than the default.
+
+-r|--resume
+    Resume the previous instance of bytenuts.
+
+--colors=<0|1>
+    Turn 8-bit ANSI colors off/on.
+
+--echo=<0|1>
+    Turn input echoing off/on.
+
+--no_crlf=<0|1>
+    Choose to send LF and not CRLF on input.
+
+--escape=<char>
+    Change the default ctrl+b escape character.
 ```
 
 ## Navigation
@@ -76,11 +100,13 @@ There are only three supported configs currently. Each config is defined like `<
 colors=1
 echo=0
 no_crlf=0
+escape=a
 ```
 
 - `colors` - enable parsing of 8-bit ANSI color codes
 - `echo` - echo input to the terminal in app
 - `no_crlf` - just send a line feed (`\n`) for user input rather than carriage return + line feed (`\r\n`)
+- `escape` - change what character is used as an escape sequence for commands (e.g. if set to `escape=a`, Bytenuts can be exited with `ctrl+a, q`)
 
 Bytenuts looks for the configs at `~/.config/bytenuts/config`.
 
@@ -115,6 +141,10 @@ You can provide multiple pages of quick commands you can easily load in with `ct
 Bytenuts will only store the first ten commands for each page, so the first 10 lines of your command files will be used.
 
 On startup, command page 1 is selected. You can select which command page is currently loaded by doing `ctrl+p, [0-9]` to load the desired page (note that index 0 will correspond to `commands10`).
+
+## Session Resumption
+
+Bytenuts caches the current instance's command list and output buffer in `~/.config/bytenuts/inbuf.log` and `~/.config/bytenuts/outbuf.log` respectively. If launched with the `-r` flag, Bytenuts will load in the input and output history from those files. The `outbuf.log` can also serve as a backup log if one forgot to launch with the `-l` flag.
 
 ## Bugs
 
