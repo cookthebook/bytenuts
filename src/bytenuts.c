@@ -258,6 +258,8 @@ bytenuts_set_status(int user, const char *fmt, ...)
 int
 bytenuts_update_screen_size()
 {
+    char *old_status = strdup(bytenuts.bytenuts_status);
+
     pthread_mutex_lock(&bytenuts.term_lock);
 
     wresize(bytenuts.status_win, 1, COLS);
@@ -274,7 +276,10 @@ bytenuts_update_screen_size()
 
     pthread_mutex_unlock(&bytenuts.term_lock);
 
+    ingest_refresh();
+    bytenuts_set_status(STATUS_BYTENUTS, old_status);
     cheerios_insert("", 0);
+    free(old_status);
 
     return 0;
 }

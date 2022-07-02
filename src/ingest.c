@@ -20,7 +20,6 @@ static ingest_t ingest;
 static int mode_normal(int ch);
 static int mode_xmodem(int block_sz);
 static int handle_functions(int ch);
-static int inbuf_load();
 static int print_stats();
 static int auto_complete();
 static int read_cmd_page(int idx);
@@ -76,6 +75,80 @@ ingest_stop()
 
     if (ingest.history_fd)
         fclose(ingest.history_fd);
+
+    return 0;
+}
+
+int
+ingest_refresh()
+{
+    static int start = 0;
+    int startx = 0, starty = 0;
+    int cx = -1, cy = -1;
+    int win_len = getmaxx(ingest.input) + 1;
+
+    pthread_mutex_lock(ingest.term_lock);
+
+    werase(ingest.input);
+    wmove(ingest.input, 0, 0);
+    if (ingest.prepend) {
+        wprintw(ingest.input, "%s", ingest.prepend);
+        getyx(ingest.input, starty, startx);
+    }
+
+    if (start > ingest.inpos) {
+        start = ingest.inpos;
+    }
+    /* this is not perfect as some characters are wider than one space, but it
+     * makes the algorithm for printing less redundant */
+    else if (ingest.inpos > (start + win_len)) {
+        start = ingest.inpos - win_len;
+    }
+
+    int i = 0;
+    int hit_cursor = 0;
+    while (1) {
+        int p = i + start;
+        int iy, ix;
+        i++;
+
+        getyx(ingest.input, iy, ix);
+
+        /* print the cursor at this position */
+        if (p == ingest.inpos) {
+            cy = iy;
+            cx = ix;
+            hit_cursor = 1;
+        }
+
+        /* nothing left to write... */
+        if (p >= ingest.inlen)
+            break;
+
+        /* we want to leave a blank character for printing the cursor at the end of the line */
+        if (ix >= (win_len-2)) {
+            /* we printed the cursor, so we can break */
+            if (hit_cursor)
+                break;
+            /* otherwise, we didn't print the cursor, so start over */
+            i = 0;
+            start++;
+            wmove(ingest.input, starty, startx);
+            continue;
+        }
+
+        waddch(ingest.input, ingest.inbuf[p]);
+    }
+
+    if (cx < 0) {
+        cx = ingest.inlen < win_len ? ingest.inlen : win_len - 1;
+        cy = 0;
+    }
+
+    wmove(ingest.input, cy, cx);
+    wrefresh(ingest.input);
+
+    pthread_mutex_unlock(ingest.term_lock);
 
     return 0;
 }
@@ -191,7 +264,7 @@ ingest_thread(void *arg)
                 memcpy(ingest.inbuf, toload, toload_len);
                 ingest.inpos = toload_len;
                 ingest.inlen = toload_len;
-                inbuf_load();
+                ingest_refresh();
                 break;
             }
             case 'c':
@@ -363,7 +436,7 @@ mode_normal(int ch)
         memset(ingest.inbuf, 0, sizeof(ingest.inbuf));
         ingest.inpos = 0;
         ingest.inlen = 0;
-        inbuf_load();
+        ingest_refresh();
 
         break;
     case KEY_UP: /* load in history */
@@ -378,7 +451,7 @@ mode_normal(int ch)
         strcpy(ingest.inbuf, ingest.history[ingest.history_pos]);
         ingest.inlen = strlen(ingest.inbuf);
         ingest.inpos = ingest.inlen;
-        inbuf_load();
+        ingest_refresh();
 
         break;
     case KEY_DOWN: /* load in history */
@@ -398,7 +471,7 @@ mode_normal(int ch)
             ingest.inpos = ingest.inlen;
         }
 
-        inbuf_load();
+        ingest_refresh();
 
         break;
     default:
@@ -421,7 +494,7 @@ mode_normal(int ch)
             ingest.inlen--;
         }
 
-        inbuf_load();
+        ingest_refresh();
 
         break;
     }
@@ -442,7 +515,7 @@ mode_xmodem(int block_sz)
     if (ingest.prepend)
         free(ingest.prepend);
     ingest.prepend = strdup("Give me a path (ctrl-c to stop): ");
-    inbuf_load();
+    ingest_refresh();
 
     while (ingest.running) {
         int ch;
@@ -474,7 +547,7 @@ mode_xmodem(int block_sz)
             break;
         case '\t': /* tab complete */
             auto_complete();
-            inbuf_load();
+            ingest_refresh();
             break;
         default:
             {
@@ -496,7 +569,7 @@ mode_xmodem(int block_sz)
                     ingest.inlen--;
                 }
 
-                inbuf_load();
+                ingest_refresh();
 
                 break;
             }
@@ -512,7 +585,7 @@ mode_xmodem(int block_sz)
             ingest.prepend = NULL;
 
             bytenuts_set_status(STATUS_INGEST, "normal");
-            inbuf_load();
+            ingest_refresh();
             return 0;
         }
     }
@@ -557,7 +630,7 @@ handle_functions(int ch)
             ingest.inpos--;
             ingest.inlen--;
             ingest.inbuf[ingest.inlen] = '\0';
-            inbuf_load();
+            ingest_refresh();
             return 1;
         }
 
@@ -569,7 +642,7 @@ handle_functions(int ch)
         ingest.inlen--;
         memcpy(&ingest.inbuf[ingest.inpos], tmp, tmp_len);
         ingest.inbuf[ingest.inlen] = '\0';
-        inbuf_load();
+        ingest_refresh();
 
         return 1;
     }
@@ -583,7 +656,7 @@ handle_functions(int ch)
         } else if (ingest.inpos == ingest.inlen - 1) {
             ingest.inbuf[ingest.inpos] = '\0';
             ingest.inlen--;
-            inbuf_load();
+            ingest_refresh();
             return 1;
         }
 
@@ -592,7 +665,7 @@ handle_functions(int ch)
         ingest.inlen--;
         memcpy(&ingest.inbuf[ingest.inpos], tmp, tmp_len);
         ingest.inbuf[ingest.inlen] = '\0';
-        inbuf_load();
+        ingest_refresh();
 
         return 1;
     }
@@ -600,21 +673,21 @@ handle_functions(int ch)
         if (ingest.inpos == 0)
             return 1;
         ingest.inpos--;
-        inbuf_load();
+        ingest_refresh();
         return 1;
     case KEY_RIGHT:
         if (ingest.inpos == ingest.inlen)
             return 1;
         ingest.inpos++;
-        inbuf_load();
+        ingest_refresh();
         return 1;
     case KEY_END:
         ingest.inpos = ingest.inlen;
-        inbuf_load();
+        ingest_refresh();
         return 1;
     case KEY_HOME:
         ingest.inpos = 0;
-        inbuf_load();
+        ingest_refresh();
         return 1;
 #if 0
     case KEY_MOUSE:
@@ -635,80 +708,6 @@ handle_functions(int ch)
     default:
         return 0;
     }
-}
-
-static int
-inbuf_load()
-{
-    static int start = 0;
-    int startx = 0, starty = 0;
-    int cx = -1, cy = -1;
-    int win_len = getmaxx(ingest.input) + 1;
-
-    pthread_mutex_lock(ingest.term_lock);
-
-    werase(ingest.input);
-    wmove(ingest.input, 0, 0);
-    if (ingest.prepend) {
-        wprintw(ingest.input, "%s", ingest.prepend);
-        getyx(ingest.input, starty, startx);
-    }
-
-    if (start > ingest.inpos) {
-        start = ingest.inpos;
-    }
-    /* this is not perfect as some characters are wider than one space, but it
-     * makes the algorithm for printing less redundant */
-    else if (ingest.inpos > (start + win_len)) {
-        start = ingest.inpos - win_len;
-    }
-
-    int i = 0;
-    int hit_cursor = 0;
-    while (1) {
-        int p = i + start;
-        int iy, ix;
-        i++;
-
-        getyx(ingest.input, iy, ix);
-
-        /* print the cursor at this position */
-        if (p == ingest.inpos) {
-            cy = iy;
-            cx = ix;
-            hit_cursor = 1;
-        }
-
-        /* nothing left to write... */
-        if (p >= ingest.inlen)
-            break;
-
-        /* we want to leave a blank character for printing the cursor at the end of the line */
-        if (ix >= (win_len-2)) {
-            /* we printed the cursor, so we can break */
-            if (hit_cursor)
-                break;
-            /* otherwise, we didn't print the cursor, so start over */
-            i = 0;
-            start++;
-            wmove(ingest.input, starty, startx);
-            continue;
-        }
-
-        waddch(ingest.input, ingest.inbuf[p]);
-    }
-
-    if (cx < 0) {
-        cx = ingest.inlen < win_len ? ingest.inlen : win_len - 1;
-        cy = 0;
-    }
-
-    wmove(ingest.input, cy, cx);
-    wrefresh(ingest.input);
-
-    pthread_mutex_unlock(ingest.term_lock);
-
-    return 0;
 }
 
 static int

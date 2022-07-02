@@ -46,6 +46,9 @@ int ingest_start(bytenuts_t *bytenuts);
 /* stop the input window thread */
 int ingest_stop();
 
+/* refresh the inbuf window */
+int ingest_refresh();
+
 /* Set the the command history directly. Values are copied */
 int ingest_set_history(char **history, int history_len);
 
