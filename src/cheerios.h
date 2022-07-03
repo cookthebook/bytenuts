@@ -3,6 +3,7 @@
 
 #include <ncurses.h>
 #include <pthread.h>
+#include <stdarg.h>
 #include <stdio.h>
 
 #include "bytenuts.h"
@@ -68,6 +69,10 @@ int cheerios_input(const char *line);
 /* output a line only to the terminal for info/prompt purposes
  * do not terminate with a newline! */
 int cheerios_info(const char *line);
+
+/* Like cheerios_insert except using printf formatting */
+__attribute__((format(printf, 1, 2)))
+int cheerios_print(const char *fmt, ...);
 
 /* directly insert a buffer to the output window */
 int cheerios_insert(const char *buf, size_t len);

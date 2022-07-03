@@ -359,8 +359,8 @@ ingest_thread(void *arg)
                 bytenuts_set_status(STATUS_INGEST, "xmodem1k");
                 break;
             case 'h':
-                cheerios_insert(
-                    "Commands (lead with ctrl-b):\r\n"
+                cheerios_print(
+                    "Commands (lead with ctrl-%c):\r\n"
                     "  c: print available quick commands\r\n"
                     "  0-9: load the given quick command (0 is 10)\r\n"
                     "  p: select a different quick commands page\r\n"
@@ -369,7 +369,7 @@ ingest_thread(void *arg)
                     "  X: start XModem upload with 1024B payloads\r\n"
                     "  h: view this help\r\n"
                     "  q: quit Bytenuts\r\n",
-                    313
+                    ingest.config->escape
                 );
                 bytenuts_set_status(STATUS_INGEST, "normal");
                 should_continue = 1;

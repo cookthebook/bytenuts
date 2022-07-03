@@ -116,11 +116,11 @@ bytenuts_run(int argc, char **argv)
     if (bytenuts.resume) {
         load_state();
     } else {
-        cheerios_insert(
+        cheerios_print(
             "Welcome to Bytenuts\r\n"
-            "To quit press ctrl-b q\r\n"
-            "To see all commands, press ctrl-b h\r\n",
-            82
+            "To quit press ctrl-%c q\r\n"
+            "To see all commands, press ctrl-%c h\r\n",
+            bytenuts.config.escape, bytenuts.config.escape
         );
     }
 

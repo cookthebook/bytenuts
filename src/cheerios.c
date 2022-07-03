@@ -185,6 +185,29 @@ cheerios_info(const char *line)
 }
 
 int
+cheerios_print(const char *fmt, ...)
+{
+    va_list ap;
+    char *buf;
+    size_t len;
+
+    va_start(ap, fmt);
+    len = vsnprintf(NULL, 0, fmt, ap);
+    va_end(ap);
+
+    buf = calloc(1, len+1);
+
+    va_start(ap, fmt);
+    vsprintf(buf, fmt, ap);
+    va_end(ap);
+
+    cheerios_insert(buf, len);
+    free(buf);
+
+    return 0;
+}
+
+int
 cheerios_insert(const char *buf, size_t len)
 {
     pthread_mutex_lock(&cheerios.lock);
