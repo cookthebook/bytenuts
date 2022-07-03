@@ -276,9 +276,9 @@ bytenuts_update_screen_size()
 
     pthread_mutex_unlock(&bytenuts.term_lock);
 
-    ingest_refresh();
     bytenuts_set_status(STATUS_BYTENUTS, old_status);
     cheerios_insert("", 0);
+    ingest_refresh();
     free(old_status);
 
     return 0;
