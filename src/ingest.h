@@ -11,6 +11,7 @@ enum ingest_mode_enum {
     INGEST_MODE_NORMAL = 0,
     INGEST_MODE_XMODEM,
     INGEST_MODE_XMODEM1K,
+    INGEST_MODE_HEX,
 };
 
 typedef struct ingest_struct {

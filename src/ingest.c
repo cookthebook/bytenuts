@@ -19,6 +19,7 @@ static ingest_t ingest;
 
 static int mode_normal(int ch);
 static int mode_xmodem(int block_sz);
+static int mode_hex(int ch);
 static int handle_functions(int ch);
 static int print_stats();
 static int auto_complete();
@@ -358,6 +359,16 @@ ingest_thread(void *arg)
                 ingest.mode = INGEST_MODE_XMODEM1K;
                 bytenuts_set_status(STATUS_INGEST, "xmodem1k");
                 break;
+            case 'H':
+                if (ingest.mode == INGEST_MODE_NORMAL) {
+                    ingest.mode = INGEST_MODE_HEX;
+                    bytenuts_set_status(STATUS_INGEST, "hex");
+                } else {
+                    ingest.mode = INGEST_MODE_NORMAL;
+                    bytenuts_set_status(STATUS_INGEST, "normal");
+                }
+                should_continue = 1;
+                break;
             case 'h':
                 cheerios_print(
                     "Commands (lead with ctrl-%c):\r\n"
@@ -396,6 +407,9 @@ ingest_thread(void *arg)
             break;
         case INGEST_MODE_XMODEM1K:
             mode_xmodem(1024);
+            break;
+        case INGEST_MODE_HEX:
+            mode_hex(ch);
             break;
         default:
             break;
@@ -588,6 +602,60 @@ mode_xmodem(int block_sz)
             ingest_refresh();
             return 0;
         }
+    }
+
+    return 0;
+}
+
+static int
+mode_hex(int ch)
+{
+    if (handle_functions(ch))
+        return 0;
+
+    switch (ch) {
+    case '\n': { /* send inputs */
+        char hexbuf[sizeof(ingest.inbuf)/2];
+        size_t inbuflen = strlen(ingest.inbuf);
+
+        for (int i = 0; i < inbuflen; i += 2) {
+            char tmp = ingest.inbuf[i+2];
+            ingest.inbuf[i+2] = '\0';
+            hexbuf[i/2] = strtol(&ingest.inbuf[i], NULL, 16);
+            // cheerios_print("HEX 0x%02X (%c)\r\n", hexbuf[i/2], hexbuf[i/2]);
+            ingest.inbuf[i+2] = tmp;
+        }
+
+        if (cheerios_insert(hexbuf, inbuflen/2)) {
+            break;
+        }
+
+        /* store in history */
+        ingest.history_pos = ingest.history_len;
+        if (ingest.inlen > 0) {
+            ingest.history_len++;
+            ingest.history = realloc(ingest.history, ingest.history_len * sizeof(char *));
+            ingest.history[ingest.history_pos] = strdup(ingest.inbuf);
+            ingest.history_pos++;
+            if (ingest.history_fd) {
+                fwrite(ingest.inbuf, 1, strlen(ingest.inbuf), ingest.history_fd);
+                fwrite("\n", 1, 1, ingest.history_fd);
+            }
+        }
+
+        memset(ingest.inbuf, 0, sizeof(ingest.inbuf));
+        ingest.inpos = 0;
+        ingest.inlen = 0;
+        ingest_refresh();
+
+        break;
+    }
+
+    case KEY_UP: /* load in history */
+    case KEY_DOWN: /* load in history */
+    default:
+        mode_normal(ch);
+        break;
     }
 
     return 0;
