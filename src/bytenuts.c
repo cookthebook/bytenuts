@@ -515,7 +515,7 @@ string_to_speed(const char *speed)
     else if (!strcmp("57600", speed))
         return B57600;
     else if (!strcmp("115200", speed))
-        return B1152000;
+        return B115200;
     else if (!strcmp("230400", speed))
         return B230400;
     else if (!strcmp("460800", speed))
@@ -582,7 +582,7 @@ speed_to_string(speed_t speed)
     else if (speed == B57600)
         return "B57600";
     else if (speed == B115200)
-        return "B1152000";
+        return "B115200";
     else if (speed == B230400)
         return "B230400";
     else if (speed == B460800)
