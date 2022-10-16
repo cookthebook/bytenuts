@@ -110,13 +110,23 @@ The help prompt lists the available commands.
 Commands (lead with ctrl-b):
   c: print available quick commands
   0-9: load the given quick command (0 is 10)
-  p, 0-9: select a different quick commands page (0 is 10)
+  p: select a different quick commands page
   i: view info/stats
   x: start XModem upload with 128B payloads
   X: start XModem upload with 1024B payloads
+  H: enter/exit hex buffer mode
   h: view this help
   q: quit Bytenuts
 ```
+
+### Hex Buffer Mode
+When the `ctrl+b H` command has been issued for the first time, you will enter hex buffer mode. In this mode, the input buffer is interpreted as a hex string and will be converted to its byte equivalent before it gets sent to the target. Example inputs:
+
+- `746573740d0a` gets sent as `test\r\n`
+- `d0a` gets sent as `\r\n` as it assumed the trailing `0` has been omitted
+- `74657374xd0a` gets sent as `test` since the `xd` byte contains an invalid hex character
+
+Hex buffer mode can be turned off with a second `ctrl+b H`.
 
 ## Quick Commands
 

@@ -378,6 +378,7 @@ ingest_thread(void *arg)
                     "  i: view info/stats\r\n"
                     "  x: start XModem upload with 128B payloads\r\n"
                     "  X: start XModem upload with 1024B payloads\r\n"
+                    "  H: enter/exit hex buffer mode\r\n"
                     "  h: view this help\r\n"
                     "  q: quit Bytenuts\r\n",
                     ingest.config->escape
@@ -429,9 +430,21 @@ mode_normal(int ch)
         return 0;
 
     switch (ch) {
-    case '\n': /* send inputs */
-        if (cheerios_input(ingest.inbuf)) {
-            break;
+    case '\n': { /* send inputs */
+        size_t inlen = strlen(ingest.inbuf);
+        const char *ending;
+
+        if (ingest.config->no_crlf)
+            ending = "\n";
+        else
+            ending = "\r\n";
+
+        cheerios_input(ingest.inbuf, inlen);
+        cheerios_input(ending, strlen(ending));
+        if (ingest.config->echo) {
+            cheerios_insert(">> ", 3);
+            cheerios_insert(ingest.inbuf, inlen);
+            cheerios_insert("\r\n", 2);
         }
 
         /* store in history */
@@ -453,6 +466,7 @@ mode_normal(int ch)
         ingest_refresh();
 
         break;
+    }
     case KEY_UP: /* load in history */
         if (ingest.history_pos == 0) { /* top of history */
             break;
@@ -617,17 +631,46 @@ mode_hex(int ch)
     case '\n': { /* send inputs */
         char hexbuf[sizeof(ingest.inbuf)/2];
         size_t inbuflen = strlen(ingest.inbuf);
+        size_t hexlen = 0;
+        /* assume leading 0 on odd length buffers */
+        if (inbuflen % 2 != 0) {
+            memmove(&ingest.inbuf[1], ingest.inbuf, inbuflen);
+            ingest.inbuf[0] = '0';
+            inbuflen++;
+        }
 
         for (int i = 0; i < inbuflen; i += 2) {
             char tmp = ingest.inbuf[i+2];
+            char *inval;
+            long ch;
+
             ingest.inbuf[i+2] = '\0';
-            hexbuf[i/2] = strtol(&ingest.inbuf[i], NULL, 16);
-            // cheerios_print("HEX 0x%02X (%c)\r\n", hexbuf[i/2], hexbuf[i/2]);
+            ch = strtol(&ingest.inbuf[i], &inval, 16);
             ingest.inbuf[i+2] = tmp;
+
+            /* strtol could not parse a character */
+            if (inval != &ingest.inbuf[i+2])
+                break;
+
+            hexbuf[i/2] = ch;
+            hexlen++;
         }
 
-        if (cheerios_insert(hexbuf, inbuflen/2)) {
-            break;
+        cheerios_input(hexbuf, hexlen);
+        if (ingest.config->echo) {
+            cheerios_insert(">> (hex)\r\n", 10);
+            for (int i = 0; i < hexlen; i++) {
+                if (
+                    i > 0 &&
+                    i != hexlen-1 &&
+                    i % 16 == 0
+                ) {
+                    cheerios_insert("\r\n", 2);
+                }
+                cheerios_insert(&ingest.inbuf[i*2], 2);
+                cheerios_insert(" ", 1);
+            }
+            cheerios_insert("\r\n", 2);
         }
 
         /* store in history */

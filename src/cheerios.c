@@ -143,25 +143,10 @@ cheerios_stop()
 }
 
 int
-cheerios_input(const char *line)
+cheerios_input(const char *buf, size_t len)
 {
-    size_t line_len = strlen(line);
-
     pthread_mutex_lock(&cheerios.lock);
-
-    if (cheerios.config->echo) {
-        char *line_parsed = calloc(1, line_len + 5 + 1);
-        sprintf(line_parsed, ">> %s\r\n", line);
-        insert_buf(&cheerios.lines, line_parsed, strlen(line_parsed));
-        free(line_parsed);
-    }
-
-    write(cheerios.ser_fd, line, strlen(line));
-    if (cheerios.config->no_crlf)
-        write(cheerios.ser_fd, "\n", 1);
-    else
-        write(cheerios.ser_fd, "\r\n", 2);
-
+    write(cheerios.ser_fd, buf, len);
     pthread_mutex_unlock(&cheerios.lock);
     return 0;
 }

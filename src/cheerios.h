@@ -62,9 +62,8 @@ int cheerios_gofwd(int lines);
 /* stop the thread and release memory */
 int cheerios_stop();
 
-/* send over a line of user input to the output
- * do not terminate with a newline! */
-int cheerios_input(const char *line);
+/* send over a line of user input to the output */
+int cheerios_input(const char *buf, size_t len);
 
 /* output a line only to the terminal for info/prompt purposes
  * do not terminate with a newline! */
