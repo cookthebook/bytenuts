@@ -146,4 +146,4 @@ Check out known bugs in the [issues tab](https://github.com/cookthebook/bytenuts
 
 ## Building
 
-Building Bytenuts is very simple. All you need is clang and libncurses. Run `make` in the Bytenuts root directory to build. You can also install the build (creating a link in `/usr/local/bin` to the `build` directory) by running `sudo make install`.
+Building Bytenuts is very simple. All you need is clang and libncurses (`sudo apt install clang libncurses5-dev`). Run `make` in the Bytenuts root directory to build. You can also install the build (creating a link in `/usr/local/bin` to the `build` directory) by running `sudo make install`.
