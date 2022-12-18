@@ -115,6 +115,8 @@ xmodem_send(
 
             if (recv_char == XMODEM_ACK) {
                 break;
+            } else if (recv_char == XMODEM_CAN) {
+                return XMODEM_ERR_CANCEL;
             }
 
             retries++;
