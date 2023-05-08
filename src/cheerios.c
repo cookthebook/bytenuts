@@ -514,8 +514,17 @@ handle_color(line_buffer_t *lines, int line_idx, int *pos, int apply)
         return 0;
 
     while (p < line_len) {
+        int fit_col = (p + 7) <= line_len;
+        int fit_en = (p + 4) <= line_len;
+
         /* fg or bg color */
-        if (!memcmp(&line[p], "\e[38;5;", 7) || !memcmp(&line[p], "\e[48;5;", 7)) {
+        if (
+            fit_col &&
+            (
+                !memcmp(&line[p], "\e[38;5;", 7) ||
+                !memcmp(&line[p], "\e[48;5;", 7)
+            )
+        ) {
             char col_str[4] = { 0 };
             short *col = line[p + 2] == '3' ? &fg : &bg;
 
@@ -543,13 +552,13 @@ handle_color(line_buffer_t *lines, int line_idx, int *pos, int apply)
             p++;
         }
         /* enable our color */
-        else if (!memcmp(&line[p], "\e[1m", 4)) {
+        else if (fit_en && !memcmp(&line[p], "\e[1m", 4)) {
             p += 4;
             enable = 1;
             break;
         }
         /* disable our color */
-        else if (!memcmp(&line[p], "\e[0m", 4)) {
+        else if (fit_en && !memcmp(&line[p], "\e[0m", 4)) {
             p += 4;
             enable = 0;
             break;
