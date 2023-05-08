@@ -40,19 +40,29 @@ ingest_start(bytenuts_t *bytenuts)
 
     HOME = getenv("HOME");
     if (HOME) {
-        char *cwd = getcwd(NULL, 0);
         int idx = 0;
-
-        chdir(HOME);
+        int name_len;
+        pid_t pid;
 
         while (!read_cmd_page(idx)) {
             idx++;
         }
 
-        ingest.history_fd = fopen(".config/bytenuts/inbuf.log", "w");
+        /* ensure that a process has a unique log */
+        pid = getpid();
+        name_len = snprintf(
+            NULL, 0,
+            "%s/.config/bytenuts/inbuf.%d.log",
+            HOME, pid
+        );
+        ingest.history_filename = calloc(1, name_len + 1);
+        snprintf(
+            ingest.history_filename, name_len + 1,
+            "%s/.config/bytenuts/inbuf.%d.log",
+            HOME, pid
+        );
 
-        chdir(cwd);
-        free(cwd);
+        ingest.history_fd = fopen(ingest.history_filename, "w");
     }
 
     if (ingest.cmd_pgs_n > 0) {
@@ -73,10 +83,6 @@ ingest_stop()
 {
     ingest.running = 0;
     pthread_join(ingest.thr, NULL);
-
-    if (ingest.history_fd)
-        fclose(ingest.history_fd);
-
     return 0;
 }
 
@@ -417,6 +423,32 @@ ingest_thread(void *arg)
         }
 
         sched_yield();
+    }
+
+    if (ingest.history_fd) {
+        char *in_filename;
+        int in_filename_len;
+        char *home = getenv("HOME");
+
+        /* do not chdir as other threads can still be running */
+        in_filename_len = snprintf(
+            NULL, 0,
+            "%s/.config/bytenuts/inbuf.log",
+            home
+        );
+        in_filename = calloc(1, in_filename_len + 1);
+        snprintf(
+            in_filename, in_filename_len + 1,
+            "%s/.config/bytenuts/inbuf.log",
+            home
+        );
+
+        /* move this processes history to the path that can be loaded on resumption */
+        fclose(ingest.history_fd);
+        rename(ingest.history_filename, in_filename);
+
+        free(in_filename);
+        free(ingest.history_filename);
     }
 
     pthread_exit(NULL);

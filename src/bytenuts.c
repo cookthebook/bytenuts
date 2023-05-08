@@ -414,10 +414,14 @@ read_state()
 {
     struct stat st;
     char *buf;
-    char *cwd = getcwd(NULL, 0);
+    char *cwd;
     char *home = getenv("HOME");
     FILE *fd;
 
+    if (!home)
+        return 0;
+
+    cwd = getcwd(NULL, 0);
     chdir(home);
 
     fd = fopen(".config/bytenuts/inbuf.log", "r");

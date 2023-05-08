@@ -35,8 +35,9 @@ typedef struct cheerios_struct {
     pthread_mutex_t *term_lock;
     int ser_fd;
     line_buffer_t lines;
-    FILE *log;
-    FILE *backup;
+    FILE *log; /* log file which was opened with -l */
+    char *backup_filename; /* realpath to the backup outbuf.pid.log */
+    FILE *backup; /* backup log file object */
     bytenuts_config_t *config;
     volatile int mode;
     pthread_cond_t cond;

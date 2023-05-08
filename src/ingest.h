@@ -24,6 +24,7 @@ typedef struct ingest_struct {
     int inpos; /* cursor position within the inbuf itself */
     int inlen; /* length of the input buffer */
     char **history; /* array of strings representing the command history */
+    char *history_filename; /* realpath of inbuf.pid.log */
     FILE *history_fd;
     char tmp_history[4096]; /* copy of inbuf before we load in history */
     int history_len;

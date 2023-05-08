@@ -25,7 +25,6 @@ int
 cheerios_start(bytenuts_t *bytenuts)
 {
     char *home = getenv("HOME");
-    char *cwd;
 
     memset(&cheerios, 0, sizeof(cheerios_t));
 
@@ -43,11 +42,25 @@ cheerios_start(bytenuts_t *bytenuts)
         }
     }
 
-    cwd = getcwd(NULL, 0);
-    chdir(home);
-    cheerios.backup = fopen(".config/bytenuts/outbuf.log", "w");
-    chdir(cwd);
-    free(cwd);
+    if (home) {
+        pid_t pid;
+        int name_len;
+
+        /* ensure that a process has a unique log */
+        pid = getpid();
+        name_len = snprintf(
+            NULL, 0,
+            "%s/.config/bytenuts/outbuf.%d.log",
+            home, pid
+        );
+        cheerios.backup_filename = calloc(1, name_len + 1);
+        snprintf(
+            cheerios.backup_filename, name_len + 1,
+            "%s/.config/bytenuts/outbuf.%d.log",
+            home, pid
+        );
+        cheerios.backup = fopen(cheerios.backup_filename, "w");
+    }
 
     pthread_cond_init(&cheerios.cond, NULL);
     pthread_mutex_init(&cheerios.lock, NULL);
@@ -138,7 +151,6 @@ cheerios_stop()
 {
     cheerios.running = 0;
     pthread_join(cheerios.thr, NULL);
-
     return 0;
 }
 
@@ -338,8 +350,33 @@ cheerios_thread(void *arg)
 
     if (cheerios.log)
         fclose(cheerios.log);
-    if (cheerios.backup)
+
+    if (cheerios.backup) {
+        char *out_filename;
+        int out_filename_len;
+        char *home = getenv("HOME");
+
+        /* do not chdir as other threads can still be running */
+        out_filename_len = snprintf(
+            NULL, 0,
+            "%s/.config/bytenuts/outbuf.log",
+            home
+        );
+        out_filename = calloc(1, out_filename_len + 1);
+        snprintf(
+            out_filename, out_filename_len + 1,
+            "%s/.config/bytenuts/outbuf.log",
+            home
+        );
+
+        /* move this processes log to the path that can be loaded on resumption */
         fclose(cheerios.backup);
+        rename(cheerios.backup_filename, out_filename);
+
+        free(out_filename);
+        free(cheerios.backup_filename);
+    }
+
     pthread_exit(NULL);
     return NULL;
 }
