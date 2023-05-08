@@ -1,5 +1,5 @@
 CC=clang
-CFLAGS=-g -Wall -MMD -pthread -D_XOPEN_SOURCE=700 -D_POSIX_C_SOURCE
+CFLAGS=-Wall -MMD -pthread -D_XOPEN_SOURCE=700 -D_POSIX_C_SOURCE
 LDFLAGS=-lpthread -lncurses
 
 DIR_SRC=src
@@ -11,7 +11,9 @@ TARGET=$(DIR_BIN)/bytenuts
 
 DEBUG ?= 0
 ifeq ($(DEBUG), 1)
-	CFLAGS += -DDEBUG
+	CFLAGS += -g
+else
+	CFLAGS += -O2
 endif
 
 SRCS=$(wildcard $(DIR_SRC)/*.c)
