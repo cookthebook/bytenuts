@@ -140,6 +140,8 @@ On startup, command page 1 is selected. You can select which command page is cur
 
 Bytenuts caches the current instance's command list and output buffer in `~/.config/bytenuts/inbuf.log` and `~/.config/bytenuts/outbuf.log` respectively. If launched with the `-r` flag, Bytenuts will load in the input and output history from those files. The `outbuf.log` can also serve as a backup log if one forgot to launch with the `-l` flag.
 
+While Bytenuts is running, the process will be writing its backup output and input to `~/.config/bytenuts/outbuf.<pid>.log` and `~/.config/bytenuts/inbuf.<pid>.log` and rename those files to the paths without the PID upon exit. This allows for multiple processes to be open without writing to the same log files. Thus, the `-r` flag will load the most recently exited Bytenuts instance.
+
 ## Bugs
 
 Check out known bugs in the [issues tab](https://github.com/cookthebook/bytenuts/issues?q=is%3Aissue+is%3Aopen+label%3Abug).
