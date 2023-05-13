@@ -5,6 +5,7 @@
 #include <pthread.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdint.h>
 
 #include "serial.h"
 
@@ -27,6 +28,7 @@ typedef struct bytenuts_config_struct {
     char *config_path; /* config file path */
     char *log_path; /* path to the log file (if it exists) */
     char *serial_path; /* path to the target serial device */
+    uint32_t inter_cmd_to; /* inter command timeout in ms */
 } bytenuts_config_t;
 
 #define CONFIG_DEFAULT (bytenuts_config_t){                                    \
@@ -38,12 +40,13 @@ typedef struct bytenuts_config_struct {
     .config_path = NULL,                                                       \
     .log_path = NULL,                                                          \
     .serial_path = NULL,                                                       \
+    .inter_cmd_to = 10,                                                        \
 }
 
 typedef struct bytenuts_struct {
     int serial_fd;
     bytenuts_config_t config;
-    int config_overrides[4];
+    int config_overrides[5];
     int resume;
     bytenuts_state_t state;
     WINDOW *status_win;

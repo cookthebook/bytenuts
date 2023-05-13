@@ -177,6 +177,8 @@ bytenuts_print_stats()
     cheerios_insert(st_line, strlen(st_line));
     sprintf(st_line, "serial_path: %s\r\n", bytenuts.config.serial_path);
     cheerios_insert(st_line, strlen(st_line));
+    sprintf(st_line, "inter_cmd_to: %d\r\n", bytenuts.config.inter_cmd_to);
+    cheerios_insert(st_line, strlen(st_line));
 
     return 0;
 }
@@ -357,6 +359,13 @@ parse_args(int argc, char **argv)
             bytenuts.config.escape = argv[i][9];
             bytenuts.config_overrides[3] = 1;
         }
+        else if (arg_len > 15 && !memcmp(argv[i], "--inter_cmd_to=", 15)) {
+            long cmd_to = strtol(&argv[i][15], NULL, 10);
+            if (cmd_to >= 0) {
+                bytenuts.config.inter_cmd_to = cmd_to;
+                bytenuts.config_overrides[4] = 1;
+            }
+        }
         else if (!strcmp(argv[i], "--resume") || !strcmp(argv[i], "-r")) {
             bytenuts.resume = 1;
         }
@@ -403,6 +412,12 @@ load_configs()
         }
         else if (!bytenuts.config_overrides[3] && !memcmp(line, "escape=", 7)) {
             bytenuts.config.escape = line[7];
+        }
+        else if (!bytenuts.config_overrides[4] && !memcmp(line, "inter_cmd_to=", 13)) {
+            long cmd_to = strtol(&line[13], NULL, 10);
+            if (cmd_to >= 0) {
+                bytenuts.config.inter_cmd_to = cmd_to;
+            }
         }
     }
 

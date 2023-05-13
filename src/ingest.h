@@ -4,6 +4,7 @@
 #include <ncurses.h>
 #include <pthread.h>
 #include <stdio.h>
+#include <time.h>
 
 #include "bytenuts.h"
 
@@ -40,6 +41,7 @@ typedef struct ingest_struct {
     int cmd_pgs_n;
     /* what command page is currently selected */
     int cmd_pg_cur;
+    struct timespec cmd_ts; /* last command sent timestamp */
 } ingest_t;
 
 /* startup the input window thread */

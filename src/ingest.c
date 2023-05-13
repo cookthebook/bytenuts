@@ -8,10 +8,12 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include "bytenuts.h"
 #include "cheerios.h"
 #include "ingest.h"
+#include "timer_math.h"
 
 static void *ingest_thread(void *arg);
 
@@ -21,10 +23,11 @@ static int mode_normal(int ch);
 static int mode_xmodem(int block_sz);
 static int mode_hex(int ch);
 static int handle_functions(int ch);
-static int print_stats();
-static int auto_complete();
+static int print_stats(void);
+static int auto_complete(void);
 static int read_cmd_page(int idx);
-static void update_cmd_pg_status();
+static void update_cmd_pg_status(void);
+static void inter_command_wait(void);
 
 int
 ingest_start(bytenuts_t *bytenuts)
@@ -69,6 +72,10 @@ ingest_start(bytenuts_t *bytenuts)
         ingest.cmd_pg_cur = 0;
     }
     update_cmd_pg_status();
+
+    clock_gettime(CLOCK_REALTIME, &ingest.cmd_ts);
+    /* ensure first command is not delayed */
+    timer_sub_ms(&ingest.cmd_ts, ingest.config->inter_cmd_to);
 
     ingest.running = 1;
     if (pthread_create(&ingest.thr, NULL, ingest_thread, NULL)) {
@@ -471,6 +478,7 @@ mode_normal(int ch)
         else
             ending = "\r\n";
 
+        inter_command_wait();
         cheerios_input(ingest.inbuf, inlen);
         cheerios_input(ending, strlen(ending));
         if (ingest.config->echo) {
@@ -688,6 +696,7 @@ mode_hex(int ch)
             hexlen++;
         }
 
+        inter_command_wait();
         cheerios_input(hexbuf, hexlen);
         if (ingest.config->echo) {
             cheerios_insert(">> (hex)\r\n", 10);
@@ -1028,4 +1037,20 @@ update_cmd_pg_status()
     } else {
         bytenuts_set_status(STATUS_CMDPAGE, "n/a");
     }
+}
+
+static void
+inter_command_wait()
+{
+    struct timespec target;
+    struct timespec now;
+
+    clock_gettime(CLOCK_REALTIME, &now);
+    memcpy(&target, &ingest.cmd_ts, sizeof(struct timespec));
+
+    timer_add_ms(&target, ingest.config->inter_cmd_to);
+    timer_sub(&target, &now);
+
+    nanosleep(&target, NULL);
+    clock_gettime(CLOCK_REALTIME, &ingest.cmd_ts);
 }

@@ -1,5 +1,5 @@
 CC=clang
-CFLAGS=-Wall -MMD -pthread -D_XOPEN_SOURCE=700 -D_POSIX_C_SOURCE
+CFLAGS=-Wall -MMD -pthread -D_XOPEN_SOURCE=700 -D_POSIX_C_SOURCE=199309L
 LDFLAGS=-lpthread -lncurses
 
 DIR_SRC=src
