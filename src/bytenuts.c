@@ -25,7 +25,8 @@
 "--colors=<0|1>\n    Turn 8-bit ANSI colors off/on.\n\n" \
 "--echo=<0|1>\n    Turn input echoing off/on.\n\n" \
 "--no_crlf=<0|1>\n    Choose to send LF and not CRLF on input.\n\n" \
-"--escape=<char>\n    Change the default ctrl+b escape character.\n" \
+"--escape=<char>\n    Change the default ctrl+b escape character.\n\n" \
+"--inter_cmd_to=<ms>\n    Set the intercommand timeout in milliseconds (default is 10ms).\n" \
 )
 
 static int parse_args(int argc, char **argv);

@@ -64,6 +64,9 @@ Configs get loaded from ${HOME}/.bytenuts/config (if file exists)
 
 --escape=<char>
     Change the default ctrl+b escape character.
+
+--inter_cmd_to=<ms>
+    Set the intercommand timeout in milliseconds (default is 10ms).
 ```
 
 ## Navigation
@@ -85,12 +88,14 @@ colors=1
 echo=0
 no_crlf=0
 escape=a
+inter_cmd_to=100
 ```
 
 - `colors` - enable parsing of 8-bit ANSI color codes
 - `echo` - echo input to the terminal in app
 - `no_crlf` - just send a line feed (`\n`) for user input rather than carriage return + line feed (`\r\n`)
 - `escape` - change what character is used as an escape sequence for commands (e.g. if set to `escape=a`, Bytenuts can be exited with `ctrl+a, q`)
+- `inter_cmd_to` - Set a timeout in milliseconds that must be met. Useful for pasting in multiple lines and ensuring a short delay in between the commands.
 
 Bytenuts looks for the configs at `~/.config/bytenuts/config`.
 
