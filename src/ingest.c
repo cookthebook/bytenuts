@@ -25,7 +25,7 @@ static int mode_hex(int ch);
 static int handle_functions(int ch);
 static int print_stats(void);
 static int auto_complete(void);
-static int read_cmd_page(int idx);
+static int read_cmd_page(const char *home_dir, int idx);
 static void update_cmd_pg_status(void);
 static void inter_command_wait(void);
 
@@ -47,7 +47,7 @@ ingest_start(bytenuts_t *bytenuts)
         int name_len;
         pid_t pid;
 
-        while (!read_cmd_page(idx)) {
+        while (!read_cmd_page(HOME, idx)) {
             idx++;
         }
 
@@ -993,13 +993,17 @@ auto_complete_cleanup:
 }
 
 static int
-read_cmd_page(int idx)
+read_cmd_page(const char *home_dir, int idx)
 {
     char fname[128];
     FILE *fd;
     char line[1024];
 
-    snprintf(fname, sizeof(fname), ".config/bytenuts/commands%d", idx+1);
+    snprintf(
+        fname, sizeof(fname),
+        "%s/.config/bytenuts/commands%d",
+        home_dir, idx+1
+    );
 
     fd = fopen(fname, "r");
     if (!fd)
