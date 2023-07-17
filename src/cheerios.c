@@ -216,17 +216,18 @@ cheerios_insert(const char *buf, size_t len)
 
 
 static void
-__xmodem_callback(size_t sent, size_t total)
+__xmodem_callback(size_t sent, size_t total, int ack_fails)
 {
     char status_str[1024];
 
 
     snprintf(
         status_str, sizeof(status_str),
-        "\r  %.02f/%.02fKB (%.01f%%)",
+        "\r  %.02f/%.02fKB (%.01f%%, %d ACK fails)",
         (sent / 1024.0),
         (total / 1024.0),
-        (sent * 100.0 / total)
+        (sent * 100.0 / total),
+        ack_fails
     );
 
     cheerios_insert(status_str, strlen(status_str));

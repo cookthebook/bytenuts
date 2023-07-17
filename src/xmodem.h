@@ -34,7 +34,7 @@ int xmodem_send(
     int in_fd,
     size_t sz,
     int block_sz,
-    void (*status_cb)(size_t sent, size_t total)
+    void (*status_cb)(size_t sent, size_t total, int ack_fails)
 );
 
 #if 0

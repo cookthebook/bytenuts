@@ -20,7 +20,7 @@ xmodem_send(
     int in_fd,
     size_t sz,
     int block_sz,
-    void (*status_cb)(size_t sent, size_t total)
+    void (*status_cb)(size_t sent, size_t total, int ack_fails)
 )
 {
     uint8_t start_byte;
@@ -30,6 +30,7 @@ xmodem_send(
     uint8_t packet_num;
     int retries;
     int ret = 0;
+    int ack_fails = 0;
 
     if (block_sz != 128 && block_sz != 1024) {
         return -1;
@@ -120,11 +121,12 @@ xmodem_send(
             }
 
             retries++;
+            ack_fails++;
         }
 
         sent += read_len;
         packet_num++; /* expect overflow */
-        status_cb(sent, sz);
+        status_cb(sent, sz, ack_fails);
     }
 
 end_of_transmission:
