@@ -1,5 +1,9 @@
 #include <libgen.h>
-#include <ncurses.h>
+#ifdef __MINGW32__
+#  include <curses.h>
+#else
+#  include <ncurses.h>
+#endif
 #include <pthread.h>
 #include <sched.h>
 #include <stdio.h>

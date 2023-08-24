@@ -1,8 +1,15 @@
 #ifndef _SERIAL_H_
 #define _SERIAL_H_
 
-#include <termios.h>
+#ifdef __MINGW32__
+#  include <windows.h>
+typedef HANDLE serial_t;
+#else
+typedef int serial_t;
+#endif
 
-int serial_open(const char *path, speed_t bps);
+serial_t serial_open(const char *path, long bps);
+int serial_read(serial_t serial, void *buf, size_t len);
+int serial_write(serial_t serial, void *buf, size_t len);
 
 #endif /* _SERIAL_H_ */

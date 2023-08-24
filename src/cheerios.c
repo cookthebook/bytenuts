@@ -1,4 +1,8 @@
-#include <ncurses.h>
+#ifdef __MINGW32__
+#  include <curses.h>
+#else
+#  include <ncurses.h>
+#endif
 #include <poll.h>
 #include <pthread.h>
 #include <sched.h>

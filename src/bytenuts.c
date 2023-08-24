@@ -1,11 +1,14 @@
-#include <ncurses.h>
+#ifdef __MINGW32__
+#  include <curses.h>
+#else
+#  include <ncurses.h>
+#endif
 #include <pthread.h>
 #include <sched.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <termios.h>
 #include <unistd.h>
 
 #include "bytenuts.h"
@@ -33,8 +36,6 @@ static int parse_args(int argc, char **argv);
 static int load_configs();
 static int read_state();
 static int load_state();
-static speed_t string_to_speed(const char *speed);
-static const char *speed_to_string(speed_t speed);
 
 static bytenuts_t bytenuts;
 
@@ -61,11 +62,13 @@ bytenuts_run(int argc, char **argv)
         return -1;
     }
 
+#ifndef __MINGW32__
     /* use pseudo-terminals for testing purposes */
     if (!strcmp(bytenuts.config.serial_path, "/dev/ptmx")) {
         grantpt(bytenuts.serial_fd);
         unlockpt(bytenuts.serial_fd);
     }
+#endif
 
     // Initialize ncurses
     initscr();
@@ -170,7 +173,7 @@ bytenuts_print_stats()
     cheerios_insert(st_line, strlen(st_line));
     sprintf(st_line, "escape: %c\r\n", bytenuts.config.escape);
     cheerios_insert(st_line, strlen(st_line));
-    sprintf(st_line, "baud: %s\r\n", speed_to_string(bytenuts.config.baud));
+    sprintf(st_line, "baud: %ld\r\n", bytenuts.config.baud);
     cheerios_insert(st_line, strlen(st_line));
     sprintf(st_line, "config_path: %s\r\n", bytenuts.config.config_path);
     cheerios_insert(st_line, strlen(st_line));
@@ -316,7 +319,7 @@ parse_args(int argc, char **argv)
             if (i == argc - 1)
                 return -1;
 
-            bytenuts.config.baud = string_to_speed(argv[i]);
+            bytenuts.config.baud = strtol(argv[i], NULL, 10);
         }
         else if (!strcmp(argv[i], "-l")) {
             i++;
@@ -497,138 +500,4 @@ load_state()
     }
 
     return 0;
-}
-
-static speed_t
-string_to_speed(const char *speed)
-{
-    if (!strcmp("50", speed))
-        return B50;
-    else if (!strcmp("75", speed))
-        return B75;
-    else if (!strcmp("110", speed))
-        return B110;
-    else if (!strcmp("134", speed))
-        return B134;
-    else if (!strcmp("150", speed))
-        return B150;
-    else if (!strcmp("200", speed))
-        return B200;
-    else if (!strcmp("300", speed))
-        return B300;
-    else if (!strcmp("600", speed))
-        return B600;
-    else if (!strcmp("1200", speed))
-        return B1200;
-    else if (!strcmp("1800", speed))
-        return B1800;
-    else if (!strcmp("2400", speed))
-        return B2400;
-    else if (!strcmp("4800", speed))
-        return B4800;
-    else if (!strcmp("9600", speed))
-        return B9600;
-    else if (!strcmp("19200", speed))
-        return B19200;
-    else if (!strcmp("38400", speed))
-        return B38400;
-    else if (!strcmp("57600", speed))
-        return B57600;
-    else if (!strcmp("115200", speed))
-        return B115200;
-    else if (!strcmp("230400", speed))
-        return B230400;
-    else if (!strcmp("460800", speed))
-        return B460800;
-    else if (!strcmp("500000", speed))
-        return B500000;
-    else if (!strcmp("576000", speed))
-        return B576000;
-    else if (!strcmp("921600", speed))
-        return B921600;
-    else if (!strcmp("1000000", speed))
-        return B1000000;
-    else if (!strcmp("1152000", speed))
-        return B1152000;
-    else if (!strcmp("1500000", speed))
-        return B1500000;
-    else if (!strcmp("2000000", speed))
-        return B2000000;
-    else if (!strcmp("2500000", speed))
-        return B2500000;
-    else if (!strcmp("3000000", speed))
-        return B3000000;
-    else if (!strcmp("3500000", speed))
-        return B3500000;
-    else if (!strcmp("4000000", speed))
-        return B4000000;
-    else
-        return B0;
-}
-
-static const char *
-speed_to_string(speed_t speed)
-{
-    if (speed == B50)
-        return "B50";
-    else if (speed == B75)
-        return "B75";
-    else if (speed == B110)
-        return "B110";
-    else if (speed == B134)
-        return "B134";
-    else if (speed == B150)
-        return "B150";
-    else if (speed == B200)
-        return "B200";
-    else if (speed == B300)
-        return "B300";
-    else if (speed == B600)
-        return "B600";
-    else if (speed == B1200)
-        return "B1200";
-    else if (speed == B1800)
-        return "B1800";
-    else if (speed == B2400)
-        return "B2400";
-    else if (speed == B4800)
-        return "B4800";
-    else if (speed == B9600)
-        return "B9600";
-    else if (speed == B19200)
-        return "B19200";
-    else if (speed == B38400)
-        return "B38400";
-    else if (speed == B57600)
-        return "B57600";
-    else if (speed == B115200)
-        return "B115200";
-    else if (speed == B230400)
-        return "B230400";
-    else if (speed == B460800)
-        return "B460800";
-    else if (speed == B500000)
-        return "B500000";
-    else if (speed == B576000)
-        return "B576000";
-    else if (speed == B921600)
-        return "B921600";
-    else if (speed == B1000000)
-        return "B1000000";
-    else if (speed == B1152000)
-        return "B1152000";
-    else if (speed == B1500000)
-        return "B1500000";
-    else if (speed == B2000000)
-        return "B2000000";
-    else if (speed == B2500000)
-        return "B2500000";
-    else if (speed == B3000000)
-        return "B3000000";
-    else if (speed == B3500000)
-        return "B3500000";
-    else if (speed == B4000000)
-        return "B4000000";
-    else
-        return "";
 }

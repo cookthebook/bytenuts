@@ -1,7 +1,11 @@
 #ifndef _CHEERIOS_H_
 #define _CHEERIOS_H_
 
-#include <ncurses.h>
+#ifdef __MINGW32__
+#  include <curses.h>
+#else
+#  include <ncurses.h>
+#endif
 #include <pthread.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -33,7 +37,7 @@ typedef struct cheerios_struct {
     pthread_t thr;
     WINDOW *output;
     pthread_mutex_t *term_lock;
-    int ser_fd;
+    serial_t ser_fd;
     line_buffer_t lines;
     FILE *log; /* log file which was opened with -l */
     char *backup_filename; /* realpath to the backup outbuf.pid.log */

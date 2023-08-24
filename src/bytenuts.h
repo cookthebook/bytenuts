@@ -1,7 +1,11 @@
 #ifndef _BYTENUTES_H_
 #define _BYTENUTES_H_
 
-#include <ncurses.h>
+#ifdef __MINGW32__
+#  include <curses.h>
+#else
+#  include <ncurses.h>
+#endif
 #include <pthread.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -24,7 +28,7 @@ typedef struct bytenuts_config_struct {
     int echo; /* echo user input to the output window, default 0 */
     int no_crlf; /* only send LF line endings, not CRLF, default 0 */
     char escape; /* which character is used for escape sequence */
-    speed_t baud; /* baud rate */
+    long baud; /* baud rate */
     char *config_path; /* config file path */
     char *log_path; /* path to the log file (if it exists) */
     char *serial_path; /* path to the target serial device */
@@ -36,7 +40,7 @@ typedef struct bytenuts_config_struct {
     .echo = 0,                                                                 \
     .no_crlf = 0,                                                              \
     .escape = 'b',                                                             \
-    .baud = B115200,                                                           \
+    .baud = 115200,                                                            \
     .config_path = NULL,                                                       \
     .log_path = NULL,                                                          \
     .serial_path = NULL,                                                       \
@@ -44,7 +48,7 @@ typedef struct bytenuts_config_struct {
 }
 
 typedef struct bytenuts_struct {
-    int serial_fd;
+    serial_t serial_fd;
     bytenuts_config_t config;
     int config_overrides[5];
     int resume;

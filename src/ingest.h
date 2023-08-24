@@ -1,7 +1,11 @@
 #ifndef _INGEST_H_
 #define _INGEST_H_
 
-#include <ncurses.h>
+#ifdef __MINGW32__
+#  include <curses.h>
+#else
+#  include <ncurses.h>
+#endif
 #include <pthread.h>
 #include <stdio.h>
 #include <time.h>
