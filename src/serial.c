@@ -3,15 +3,18 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <time.h>
+#include <stdint.h>
 
 #include "serial.h"
 
 #ifdef __MINGW32__
 #  include <windows.h>
+
 serial_t
 serial_open(const char *comport, long bps)
 {
-    DCB dcb = { 0 };
+    /* referred to: https://github.com/waynix/SPinGW/tree/master */
     HANDLE serial = CreateFile(
         comport,
         GENERIC_READ | GENERIC_WRITE,
@@ -21,15 +24,112 @@ serial_open(const char *comport, long bps)
         0,
         0
     );
+    DCB serial_params = { 0 };
+    COMMTIMEOUTS timeouts = { 0 };
 
     if (serial == INVALID_HANDLE_VALUE) {
+        return SERIAL_INVALID;
+    }
+
+    serial_params.DCBlength = sizeof(serial_params);
+    if (!GetCommState(serial, &serial_params)) {
+        return SERIAL_INVALID;
+    }
+
+    /* 8n1 */
+    serial_params.BaudRate = bps;
+    serial_params.ByteSize = 8;
+    serial_params.StopBits = 1;
+    serial_params.Parity = NOPARITY;
+
+    if (!SetCommState(serial, &serial_params)) {
+        return SERIAL_INVALID;
+    }
+
+    timeouts.ReadIntervalTimeout = 0;
+    timeouts.ReadTotalTimeoutConstant = 0;
+    timeouts.ReadTotalTimeoutMultiplier = 0;
+    timeouts.WriteTotalTimeoutConstant = 0;
+    timeouts.WriteTotalTimeoutMultiplier = 0;
+
+    if (!SetCommTimeouts(serial, &timeouts)) {
+        return SERIAL_INVALID;
+    }
+
+    return serial;
+}
+
+ssize_t
+serial_read(serial_t serial, void *buf, size_t len)
+{
+    DWORD ret = 0;
+
+    if (!ReadFile(serial, buf, len, &ret, NULL)) {
         return -1;
     }
 
-    /* TODO
-     * reference: https://github.com/waynix/SPinGW/tree/master */
-    return serial;
+    return ret;
 }
+
+ssize_t
+serial_read_to(serial_t serial, void *buf, size_t len, unsigned int to_ms)
+{
+    DWORD ret = -1;
+    size_t p = 0;
+    size_t len_left = len;
+
+    while (to_ms > 0) {
+        DWORD tmp = 0;
+
+        if (!ReadFile(serial, &((uint8_t *)buf)[p], len_left, &tmp, NULL)) {
+            return ret;
+        }
+
+        if (tmp > 0) {
+            if (ret < 0) {
+                ret = tmp;
+            } else {
+                ret += tmp;
+            }
+
+            len_left -= tmp;
+            p += tmp;
+        }
+
+        if (len_left == 0) {
+            return ret;
+        }
+
+        /* sleep 1ms */
+        nanosleep(&(struct timespec){ 0, 1000000 }, NULL);
+        to_ms--;
+    }
+
+    if (ret < 0) {
+        ret = 0;
+    }
+
+    return ret;
+}
+
+ssize_t
+serial_write(serial_t serial, const void *buf, size_t len)
+{
+    DWORD ret = 0;
+
+    if (!WriteFile(serial, buf, len, &ret, NULL)) {
+        return -1;
+    }
+
+    return ret;
+}
+
+int
+serial_close(serial_t serial)
+{
+    return (CloseHandle(serial) != 0);
+}
+
 #else
 #  include <termios.h>
 #  include <poll.h>
@@ -46,7 +146,7 @@ serial_open(const char *path, long bps)
 
     fd = open(path, O_RDWR | O_NOCTTY | O_NDELAY);
     if (fd == -1) {
-        return -1;
+        return SERIAL_INVALID;
     }
 
     tcgetattr(fd, &otio);
@@ -88,25 +188,37 @@ serial_open(const char *path, long bps)
     return fd;
 }
 
-int
+ssize_t
 serial_read(serial_t serial, void *buf, size_t len)
+{
+    return serial_read_to(serial, buf, len, 0);
+}
+
+ssize_t
+serial_read_to(serial_t serial, void *buf, size_t len, unsigned int to_ms)
 {
     struct pollfd fds;
     fds.fd = serial;
     fds.events = POLLIN;
     fds.revents = 0;
 
-    if (poll(&fds, 1, 1) == 0) {
+    if (poll(&fds, 1, to_ms) == 0) {
         return 0;
     }
 
-    return (int)read(serial, buf, len);
+    return read(serial, buf, len);
+}
+
+ssize_t
+serial_write(serial_t serial, const void *buf, size_t len)
+{
+    return write(serial, buf, len);
 }
 
 int
-serial_write(serial_t serial, void *buf, size_t len)
+serial_close(serial_t serial)
 {
-    return (int)write(serial, buf, len);
+    return close(serial);
 }
 
 static speed_t

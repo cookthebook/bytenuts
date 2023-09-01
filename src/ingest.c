@@ -59,14 +59,14 @@ ingest_start(bytenuts_t *bytenuts)
         pid = getpid();
         name_len = snprintf(
             NULL, 0,
-            "%s/.config/bytenuts/inbuf.%d.log",
-            HOME, pid
+            "%s/.config/bytenuts/inbuf.%lld.log",
+            HOME, (long long)pid
         );
         ingest.history_filename = calloc(1, name_len + 1);
         snprintf(
             ingest.history_filename, name_len + 1,
-            "%s/.config/bytenuts/inbuf.%d.log",
-            HOME, pid
+            "%s/.config/bytenuts/inbuf.%lld.log",
+            HOME, (long long)pid
         );
 
         ingest.history_fd = fopen(ingest.history_filename, "w");
@@ -209,7 +209,6 @@ ingest_set_history(char **history, int history_len)
 static void *
 ingest_thread(void *arg)
 {
-    int esc_flag;
     int ch;
 
     memset(ingest.inbuf, 0, sizeof(ingest.inbuf));
@@ -218,8 +217,6 @@ ingest_thread(void *arg)
     bytenuts_set_status(STATUS_INGEST, "normal");
 
     while (ingest.running) {
-        esc_flag = 0;
-
         pthread_mutex_lock(ingest.term_lock);
         ch = wgetch(ingest.input);
         pthread_mutex_unlock(ingest.term_lock);

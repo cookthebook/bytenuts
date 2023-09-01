@@ -30,7 +30,7 @@
  * length of `block_sz`.
  */
 int xmodem_send(
-    int dest_fd,
+    serial_t dest_fd,
     int in_fd,
     size_t sz,
     int block_sz,

@@ -3,7 +3,6 @@
 #else
 #  include <ncurses.h>
 #endif
-#include <poll.h>
 #include <pthread.h>
 #include <sched.h>
 #include <stdio.h>
@@ -54,14 +53,14 @@ cheerios_start(bytenuts_t *bytenuts)
         pid = getpid();
         name_len = snprintf(
             NULL, 0,
-            "%s/.config/bytenuts/outbuf.%d.log",
-            home, pid
+            "%s/.config/bytenuts/outbuf.%lld.log",
+            home, (long long)pid
         );
         cheerios.backup_filename = calloc(1, name_len + 1);
         snprintf(
             cheerios.backup_filename, name_len + 1,
-            "%s/.config/bytenuts/outbuf.%d.log",
-            home, pid
+            "%s/.config/bytenuts/outbuf.%lld.log",
+            home, (long long)pid
         );
         cheerios.backup = fopen(cheerios.backup_filename, "w");
     }
@@ -161,9 +160,22 @@ cheerios_stop()
 int
 cheerios_input(const char *buf, size_t len)
 {
+    size_t len_left = len;
+    size_t p = 0;
+
     pthread_mutex_lock(&cheerios.lock);
-    write(cheerios.ser_fd, buf, len);
+    while (len_left > 0) {
+        ssize_t tmp = serial_write(cheerios.ser_fd, &buf[p], len_left);
+
+        if (tmp < 0) {
+            pthread_mutex_unlock(&cheerios.lock);
+            return -1;
+        }
+
+        len_left -= tmp;
+    }
     pthread_mutex_unlock(&cheerios.lock);
+
     return 0;
 }
 
@@ -295,6 +307,7 @@ cheerios_getmaxy()
 {
     int y, x;
     getmaxyx(cheerios.output, y, x);
+    (void)x;
     return y;
 }
 
@@ -303,6 +316,7 @@ cheerios_getmaxx()
 {
     int y, x;
     getmaxyx(cheerios.output, y, x);
+    (void)y;
     return x;
 }
 
@@ -325,7 +339,6 @@ cheerios_thread(void *arg)
 {
     char buf[1024];
     ssize_t read_ret = 0;
-    struct pollfd fds;
 
     while (cheerios.running) {
         pthread_mutex_lock(&cheerios.lock);
@@ -334,17 +347,7 @@ cheerios_thread(void *arg)
             pthread_cond_wait(&cheerios.cond, &cheerios.lock);
         }
 
-        fds.fd = cheerios.ser_fd;
-        fds.events = POLLIN;
-        fds.revents = 0;
-
-        if (poll(&fds, 1, 1) == 0) {
-            pthread_mutex_unlock(&cheerios.lock);
-            nanosleep(&(struct timespec){ 0, 100000 }, NULL);
-            continue;
-        }
-
-        read_ret = read(cheerios.ser_fd, buf, sizeof(buf));
+        read_ret = serial_read(cheerios.ser_fd, buf, sizeof(buf));
         if (read_ret > 0) {
             insert_buf(&cheerios.lines, buf, read_ret);
         }

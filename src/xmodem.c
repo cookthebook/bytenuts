@@ -1,4 +1,3 @@
-#include <poll.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -8,7 +7,7 @@
 
 #include "xmodem.h"
 
-int _xmodem_wait(int fd, uint8_t *ret, int timeout_ms);
+int _xmodem_wait(serial_t fd, uint8_t *ret, int timeout_ms);
 
 uint16_t _xmodem_crc(const uint8_t *buf, size_t len);
 uint8_t _xmodem_csum(const uint8_t *buf, size_t len);
@@ -16,7 +15,7 @@ void _xmodem_status_print(size_t sent, size_t total);
 
 int
 xmodem_send(
-    int dest_fd,
+    serial_t dest_fd,
     int in_fd,
     size_t sz,
     int block_sz,
@@ -106,7 +105,7 @@ xmodem_send(
                 goto end_of_transmission;
             }
 
-            if (write(dest_fd, buf, buf_sz) != buf_sz){
+            if (serial_write(dest_fd, buf, buf_sz) != buf_sz){
                 return XMODEM_ERR_WRITE;
             }
 
@@ -138,7 +137,7 @@ end_of_transmission:
             return XMODEM_ERR_TIMEOUT;
         }
 
-        write(dest_fd, &(uint8_t){XMODEM_EOT}, 1);
+        serial_write(dest_fd, &(uint8_t){XMODEM_EOT}, 1);
 
         if (
             !_xmodem_wait(dest_fd, &ack_char, XMODEM_TIMEOUT) &&
@@ -154,19 +153,11 @@ end_of_transmission:
 }
 
 int
-_xmodem_wait(int fd, uint8_t *ret, int timeout_ms)
+_xmodem_wait(serial_t fd, uint8_t *ret, int timeout_ms)
 {
-    struct pollfd pfd;
-
-    pfd.fd = fd;
-    pfd.events = POLLIN;
-    pfd.revents = 0;
-
-    if (poll(&pfd, 1, timeout_ms) <= 0) {
+    if (serial_read_to(fd, ret, 1, timeout_ms) != 1) {
         return -1;
     }
-
-    read(fd, ret, 1);
 
     return 0;
 }

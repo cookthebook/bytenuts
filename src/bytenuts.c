@@ -58,9 +58,15 @@ bytenuts_run(int argc, char **argv)
     }
 
     bytenuts.serial_fd = serial_open(bytenuts.config.serial_path, bytenuts.config.baud);
-    if (bytenuts.serial_fd < 0) {
+    if (bytenuts.serial_fd == SERIAL_INVALID) {
+        printf(
+            "Failed to open serial port \"%s\"\r\n",
+            bytenuts.config.serial_path
+        );
         return -1;
     }
+
+    printf("Opened \"%s\"\r\n", bytenuts.config.serial_path);
 
 #ifndef __MINGW32__
     /* use pseudo-terminals for testing purposes */
@@ -111,11 +117,13 @@ bytenuts_run(int argc, char **argv)
     cheerios_start(&bytenuts);
     ingest_start(&bytenuts);
 
+#ifndef __MINGW32__
     if (!strcmp(bytenuts.config.serial_path, "/dev/ptmx")) {
         char info[128];
         snprintf(info, sizeof(info), "Opened PTY port %s", ptsname(bytenuts.serial_fd));
         cheerios_info(info);
     }
+#endif
 
     if (bytenuts.resume) {
         load_state();
@@ -157,7 +165,7 @@ bytenuts_kill()
     delwin(bytenuts.out_win);
     endwin();
 
-    close(bytenuts.serial_fd);
+    serial_close(bytenuts.serial_fd);
 }
 
 int
@@ -302,10 +310,17 @@ parse_args(int argc, char **argv)
     /* setup default options first */
     bytenuts.config = CONFIG_DEFAULT;
     {
+#ifdef __MINGW32__
+        char *home = getenv("HOMEPATH");
+        char path[] = "\\.config\\bytenuts\\config";
+        bytenuts.config.config_path = malloc(strlen(home) + strlen(path) + 4);
+        sprintf(bytenuts.config.config_path, "C:\\%s%s", home, path);
+#else
         char *home = getenv("HOME");
         char path[] = "/.config/bytenuts/config";
         bytenuts.config.config_path = malloc(strlen(home) + strlen(path) + 1);
         sprintf(bytenuts.config.config_path, "%s%s", home, path);
+#endif
     }
 
     for (int i = 1; i < argc - 1; i++) {
