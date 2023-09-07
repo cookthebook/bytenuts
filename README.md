@@ -24,6 +24,10 @@ Bytenuts has been tested and built on x86-64 and 32-bit ARM Ubuntu 18.
 - Quick commands - Pages of quick commands are loaded from `~/.config/bytenuts/commands[1-10]`
 - Session resumption - Bytenuts can load the previous instance's commands and serial output
 
+Sample screenshot running in Windows Terminal and WSL:
+
+![Bytenuts Screenshot](Screenshot.png)
+
 ## Launch Options
 
 Launching Bytenuts like `bytenuts -h` provides this help print:
