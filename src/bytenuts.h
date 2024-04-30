@@ -33,6 +33,9 @@ typedef struct bytenuts_config_struct {
     char *log_path; /* path to the log file (if it exists) */
     char *serial_path; /* path to the target serial device */
     uint32_t inter_cmd_to; /* inter command timeout in ms */
+    /* time format to be prepended to all log lines in the output file only,
+     * NULL for no time prepended */
+    char *time_fmt;
 } bytenuts_config_t;
 
 #define CONFIG_DEFAULT (bytenuts_config_t){                                    \
@@ -45,12 +48,13 @@ typedef struct bytenuts_config_struct {
     .log_path = NULL,                                                          \
     .serial_path = NULL,                                                       \
     .inter_cmd_to = 10,                                                        \
+    .time_fmt = NULL,                                                          \
 }
 
 typedef struct bytenuts_struct {
     serial_t serial_fd;
     bytenuts_config_t config;
-    int config_overrides[5];
+    int config_overrides[6];
     int resume;
     bytenuts_state_t state;
     WINDOW *status_win;

@@ -71,6 +71,9 @@ Configs get loaded from ${HOME}/.bytenuts/config (if file exists)
 
 --inter_cmd_to=<ms>
     Set the intercommand timeout in milliseconds (default is 10ms).
+
+--time_fmt=<fmt>
+    Time format as used by strftime to prepend to every log line.
 ```
 
 ## Navigation
@@ -85,7 +88,7 @@ If the output window reaches the current line of output, then the output will co
 
 ## Configuration File
 
-There are only three supported configs currently. Each config is defined like `<name>=<value>`. Here is a sample config:
+Many of the launch options have a corresponding configuration token that can be saved to a config file. Each config is defined like `<name>=<value>`. Here is a sample config:
 
 ```
 colors=1
@@ -93,6 +96,7 @@ echo=0
 no_crlf=0
 escape=a
 inter_cmd_to=100
+time_fmt=%X %m/%d %Z|>
 ```
 
 - `colors` - enable parsing of 8-bit ANSI color codes
@@ -100,6 +104,7 @@ inter_cmd_to=100
 - `no_crlf` - just send a line feed (`\n`) for user input rather than carriage return + line feed (`\r\n`)
 - `escape` - change what character is used as an escape sequence for commands (e.g. if set to `escape=a`, Bytenuts can be exited with `ctrl+a, q`)
 - `inter_cmd_to` - Set a timeout in milliseconds that must be met. Useful for pasting in multiple lines and ensuring a short delay in between the commands.
+- `time_fmt` - The time format string (see `man 3 strftime`) to be prepended to every line in the log file (will not get printed in the console view)
 
 Bytenuts looks for the configs at `~/.config/bytenuts/config`.
 

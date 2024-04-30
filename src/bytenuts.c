@@ -29,7 +29,8 @@
 "--echo=<0|1>\n    Turn input echoing off/on.\n\n" \
 "--no_crlf=<0|1>\n    Choose to send LF and not CRLF on input.\n\n" \
 "--escape=<char>\n    Change the default ctrl+b escape character.\n\n" \
-"--inter_cmd_to=<ms>\n    Set the intercommand timeout in milliseconds (default is 10ms).\n" \
+"--inter_cmd_to=<ms>\n    Set the intercommand timeout in milliseconds (default is 10ms).\n\n" \
+"--time_fmt=<fmt>\n    Time format as used by strftime to prepend to every log line.\n" \
 )
 
 static int parse_args(int argc, char **argv);
@@ -190,6 +191,8 @@ bytenuts_print_stats()
     sprintf(st_line, "serial_path: %s\r\n", bytenuts.config.serial_path);
     cheerios_insert(st_line, strlen(st_line));
     sprintf(st_line, "inter_cmd_to: %d\r\n", bytenuts.config.inter_cmd_to);
+    cheerios_insert(st_line, strlen(st_line));
+    sprintf(st_line, "time_fmt: %s\r\n", bytenuts.config.time_fmt);
     cheerios_insert(st_line, strlen(st_line));
 
     return 0;
@@ -385,6 +388,10 @@ parse_args(int argc, char **argv)
                 bytenuts.config_overrides[4] = 1;
             }
         }
+        else if (arg_len > 11 && !memcmp(argv[i], "--time_fmt=", 11)) {
+            bytenuts.config.time_fmt = strdup(&argv[i][11]);
+            bytenuts.config_overrides[5] = 1;
+        }
         else if (!strcmp(argv[i], "--resume") || !strcmp(argv[i], "-r")) {
             bytenuts.resume = 1;
         }
@@ -436,6 +443,22 @@ load_configs()
             long cmd_to = strtol(&line[13], NULL, 10);
             if (cmd_to >= 0) {
                 bytenuts.config.inter_cmd_to = cmd_to;
+            }
+        }
+        else if (!bytenuts.config_overrides[5] && !memcmp(line, "time_fmt=", 9)) {
+            size_t time_fmt_len;
+            bytenuts.config.time_fmt = strdup(&line[9]);
+
+            time_fmt_len = strlen(bytenuts.config.time_fmt);
+            while (
+                time_fmt_len > 0 &&
+                (
+                    bytenuts.config.time_fmt[time_fmt_len-1] == '\r' ||
+                    bytenuts.config.time_fmt[time_fmt_len-1] == '\n'
+                )
+            ) {
+                bytenuts.config.time_fmt[time_fmt_len-1] = 0;
+                time_fmt_len--;
             }
         }
     }

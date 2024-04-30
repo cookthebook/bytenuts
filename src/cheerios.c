@@ -667,5 +667,22 @@ newline(line_buffer_t *lines)
     lines->line_lens = realloc(lines->line_lens, sizeof(int) * lines->n_lines);
     lines->line_lens[lines->n_lines - 1] = 0;
     lines->pos = 0;
+
+    if (cheerios.config->time_fmt && (cheerios.log || cheerios.backup)) {
+        char tstr[128];
+        time_t now;
+        struct tm *tinfo;
+        size_t tstr_len;
+
+        time(&now);
+        tinfo = localtime(&now);
+        tstr_len = strftime(tstr, 128, cheerios.config->time_fmt, tinfo);
+
+        if (cheerios.log)
+            fwrite(tstr, 1, tstr_len, cheerios.log);
+        if (cheerios.backup)
+            fwrite(tstr, 1, tstr_len, cheerios.backup);
+    }
+
     return 0;
 }
