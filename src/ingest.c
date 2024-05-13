@@ -44,6 +44,7 @@ ingest_start(bytenuts_t *bytenuts)
     ingest.term_lock = &bytenuts->term_lock;
     ingest.config = &bytenuts->config;
     ingest.cmd_pg_cur = -1;
+    ingest.xmodem_hist = bstr_history_create();
 
     HOME = getenv("HOME");
     if (HOME) {
@@ -459,6 +460,8 @@ ingest_thread(void *arg)
         free(ingest.history_filename);
     }
 
+    bstr_history_destroy(ingest.xmodem_hist);
+
     pthread_exit(NULL);
     return NULL;
 }
@@ -600,6 +603,8 @@ mode_xmodem(int block_sz)
 
         switch (ch) {
         case '\n':
+            bstr_history_new_entry(ingest.xmodem_hist, ingest.inbuf);
+
             pthread_mutex_lock(ingest.term_lock);
             werase(ingest.input);
             wmove(ingest.input, 0, 0);
@@ -618,6 +623,34 @@ mode_xmodem(int block_sz)
             auto_complete();
             ingest_refresh();
             break;
+        case KEY_BACKSPACE:
+        case KEY_UP:
+            /* fall-through */
+        case KEY_DOWN:
+            {
+                const char *filename;
+
+                if (ch == KEY_UP) {
+                    bstr_history_older(ingest.xmodem_hist);
+                } else {
+                    bstr_history_newer(ingest.xmodem_hist);
+                }
+
+                filename = bstr_history_atpos(ingest.xmodem_hist);
+                if (!filename) {
+                    memset(ingest.inbuf, 0, sizeof(ingest.inbuf));
+                    ingest.inpos = 0;
+                    ingest.inlen = 0;
+                    ingest_refresh();
+                    break;
+                }
+
+                strncpy(ingest.inbuf, filename, sizeof(ingest.inbuf));
+                ingest.inpos = strlen(ingest.inbuf);
+                ingest.inlen = ingest.inpos;
+                ingest_refresh();
+                break;
+            }
         default:
             {
                 char tmp[1024];
@@ -652,6 +685,8 @@ mode_xmodem(int block_sz)
             ingest.mode = INGEST_MODE_NORMAL;
             free(ingest.prepend);
             ingest.prepend = NULL;
+
+            bstr_history_unset_pos(ingest.xmodem_hist);
 
             bytenuts_set_status(STATUS_INGEST, "normal");
             ingest_refresh();

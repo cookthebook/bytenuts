@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <time.h>
 
+#include "bstr.h"
 #include "bytenuts.h"
 
 enum ingest_mode_enum {
@@ -46,6 +47,7 @@ typedef struct ingest_struct {
     /* what command page is currently selected */
     int cmd_pg_cur;
     struct timespec cmd_ts; /* last command sent timestamp */
+    bstr_history_handle xmodem_hist; /* xmodem filename transfer history */
 } ingest_t;
 
 /* startup the input window thread */
