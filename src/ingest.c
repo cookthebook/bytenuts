@@ -466,6 +466,55 @@ ingest_thread(void *arg)
     return NULL;
 }
 
+/* Add an item to the input history, doing nothing if the line is the same as
+ * the previous, and re-arranging history if the line was seen previously. */
+static void
+history_add(const char *line)
+{
+    ingest.history_pos = ingest.history_len;
+
+    if (*line == '\0') {
+        /* Line is empty. */
+        return;
+    }
+
+    if (ingest.history_len != 0) {
+        if (!strcmp(ingest.history[ingest.history_len - 1], line)) {
+            /* Line is a repeat of the previous history item. */
+            return;
+        }
+
+        for (unsigned i = 0; i < ingest.history_len - 1; i++) {
+            if (!strcmp(ingest.history[i], line)) {
+                /* Re-arrange history to move item to the front */
+                char *history_item = ingest.history[i];
+                memcpy(&ingest.history[i], &ingest.history[i+1],
+                       (ingest.history_len - (i + 1)) * sizeof(ingest.history[0]));
+                ingest.history[ingest.history_len - 1] = history_item;
+
+                if (ingest.history_fd) {
+                    fseek(ingest.history_fd, 0, SEEK_SET);
+                    for (unsigned i = 0; i < ingest.history_len; i++) {
+                        fwrite(ingest.history[i], 1, strlen(ingest.history[i]), ingest.history_fd);
+                        fwrite("\n", 1, 1, ingest.history_fd);
+                    }
+                }
+
+                return;
+            }
+        }
+    }
+
+    ingest.history_len++;
+    ingest.history = realloc(ingest.history, ingest.history_len * sizeof(char *));
+    ingest.history[ingest.history_pos] = strdup(ingest.inbuf);
+    ingest.history_pos++;
+    if (ingest.history_fd) {
+        fwrite(line, 1, strlen(line), ingest.history_fd);
+        fwrite("\n", 1, 1, ingest.history_fd);
+    }
+}
+
 static int
 mode_normal(int ch)
 {
@@ -492,17 +541,7 @@ mode_normal(int ch)
         }
 
         /* store in history */
-        ingest.history_pos = ingest.history_len;
-        if (ingest.inlen > 0) {
-            ingest.history_len++;
-            ingest.history = realloc(ingest.history, ingest.history_len * sizeof(char *));
-            ingest.history[ingest.history_pos] = strdup(ingest.inbuf);
-            ingest.history_pos++;
-            if (ingest.history_fd) {
-                fwrite(ingest.inbuf, 1, strlen(ingest.inbuf), ingest.history_fd);
-                fwrite("\n", 1, 1, ingest.history_fd);
-            }
-        }
+        history_add(ingest.inbuf);
 
         memset(ingest.inbuf, 0, sizeof(ingest.inbuf));
         ingest.inpos = 0;
